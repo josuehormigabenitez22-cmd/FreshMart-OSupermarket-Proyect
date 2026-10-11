@@ -1,55 +1,122 @@
 # Generamos un script para explorar los datos que nos han dado
 
-import pandas as pd
+import json
 from pathlib import Path
+import pandas as pd
 
-# Localizar la raíz del proyecto
+
+# Directorios del proyecto
 ROOT_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT_DIR / "data"
-
-# Cargar los archivos CSV
-clientes = pd.read_csv(DATA_DIR / "campana_verano_clientes.csv")
-ventas = pd.read_csv(DATA_DIR / "campana_verano_ventas.csv")
-productos = pd.read_csv(DATA_DIR / "productos_promo_verano.csv")
-
-# Mostramos por pantalla información básica de los datos
-print("=" * 60)
-print("CLIENTES DE LA CAMPAÑA")
-print("=" * 60)
-print(f"Filas: {len(clientes):,}")
-print(f"Columnas: {list(clientes.columns)}")
-print()
-print(clientes.info())
-print()
-print(clientes.head())
-print()
-print("Nulos por columna:")
-print(clientes.isnull().sum())
-print()
-print(f"IDs únicos: {clientes['cliente_id'].nunique():,}")
-print(f"IDs totales: {len(clientes):,}")
-print(f"→ Posibles duplicados: {len(clientes) - clientes['cliente_id'].nunique():,}")
+REPORT_DIR = ROOT_DIR / "reports"
+REPORT_PATH = REPORT_DIR / "exploracion_campana.json"
 
 
-# Explorar el CSV de ventas — aquí es donde está el CAOS
-print("=" * 60)
-print("VENTAS DE LA CAMPAÑA")
-print("=" * 60)
-print(f"Filas: {len(ventas):,}")
-print(f"Columnas: {list(ventas.columns)}")
-print()
-print(ventas.dtypes)
-print()
-print("Primeras filas:")
-print(ventas.head(10).to_string())
-print()
-print("Nulos por columna:")
-print(ventas.isnull().sum())
-print()
-# Verificar el formato de fecha_compra
-print("Muestras de fecha_compra:")
-print(ventas['fecha_compra'].sample(10, random_state=42).values)
-print()
-# Verificar el formato de precio
-print("Muestras de precio:")
-print(ventas['precio'].sample(10, random_state=42).values)
+def analizar_csv(
+    nombre_archivo: str,
+    columnas_muestra: list[str] | None = None,
+    columna_id: str | None = None,
+    filas_muestra: int = 10,
+) -> dict:
+    """Analiza un CSV y devuelve un informe serializable a JSON"""
+
+    ruta = DATA_DIR / nombre_archivo
+    df = pd.read_csv(ruta)
+
+    # Sustituir valores ausentes por None para generar JSON válido.
+    muestra = (
+        df.head(filas_muestra)
+        .astype(object)
+        .where(df.head(filas_muestra).notna(), None)
+        .to_dict(orient="records")
+    )
+
+    informe = {
+        "archivo": nombre_archivo,
+        "filas": len(df),
+        "numero_columnas": len(df.columns),
+        "columnas": list(df.columns),
+        "tipos_datos": {
+            columna: str(tipo)
+            for columna, tipo in df.dtypes.items()
+        },
+        "valores_nulos": {
+            columna: int(cantidad)
+            for columna, cantidad in df.isnull().sum().items()
+        },
+        "filas_muestra": muestra,
+    }
+
+    # Analizar posibles duplicados por identificador.
+    if columna_id and columna_id in df.columns:
+        ids_unicos = int(df[columna_id].nunique())
+
+        informe["identificadores"] = {
+            "columna": columna_id,
+            "ids_unicos": ids_unicos,
+            "ids_totales": int(len(df)),
+            "posibles_duplicados": int(len(df) - ids_unicos),
+        }
+
+    # Inspeccionar muestras de columnas concretas.
+    if columnas_muestra:
+        informe["muestras_columnas"] = {}
+
+        for columna in columnas_muestra:
+            if columna in df.columns:
+                valores = (
+                    df[columna]
+                    .dropna()
+                    .head(filas_muestra)
+                    .tolist()
+                )
+
+                # Convertir tipos NumPy y otros valores a tipos JSON.
+                informe["muestras_columnas"][columna] = [
+                    valor.item() if hasattr(valor, "item") else valor
+                    for valor in valores
+                ]
+
+    return informe
+
+
+def main() -> None:
+    """Genera el informe de exploración de los datos de la campaña."""
+
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+
+    informes = {
+        "clientes": analizar_csv(
+            "campana_verano_clientes.csv",
+            columna_id="cliente_id",
+        ),
+        "ventas": analizar_csv(
+            "campana_verano_ventas.csv",
+            columnas_muestra=["fecha_compra", "precio"],
+        ),
+        "productos": analizar_csv(
+            "productos_promo_verano.csv",
+        ),
+    }
+
+    informe_final = {
+        "proyecto": "FreshMart",
+        "tipo_informe": "exploracion_inicial",
+        "datasets": informes,
+    }
+
+    with REPORT_PATH.open("w", encoding="utf-8") as archivo:
+        json.dump(
+            informe_final,
+            archivo,
+            indent=4,
+            ensure_ascii=False,
+            allow_nan=False,
+            default=str,
+        )
+
+    print(f"Informe generado correctamente: {REPORT_PATH}")
+
+
+if __name__ == "__main__":
+    main()
