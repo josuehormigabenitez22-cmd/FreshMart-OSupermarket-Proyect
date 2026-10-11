@@ -1,0 +1,436 @@
+{
+    "proyecto": "FreshMart",
+    "tipo_informe": "exploracion_inicial",
+    "datasets": {
+        "clientes": {
+            "archivo": "campana_verano_clientes.csv",
+            "filas": 15247,
+            "numero_columnas": 8,
+            "columnas": [
+                "cliente_id",
+                "campana",
+                "fecha_envio",
+                "canal_contacto",
+                "abrio_email",
+                "clickeo_link",
+                "compro",
+                "primer_compra_campana"
+            ],
+            "tipos_datos": {
+                "cliente_id": "int64",
+                "campana": "str",
+                "fecha_envio": "str",
+                "canal_contacto": "str",
+                "abrio_email": "object",
+                "clickeo_link": "object",
+                "compro": "bool",
+                "primer_compra_campana": "str"
+            },
+            "valores_nulos": {
+                "cliente_id": 0,
+                "campana": 0,
+                "fecha_envio": 0,
+                "canal_contacto": 0,
+                "abrio_email": 5355,
+                "clickeo_link": 11065,
+                "compro": 0,
+                "primer_compra_campana": 12330
+            },
+            "filas_muestra": [
+                {
+                    "cliente_id": 104098,
+                    "campana": "verano_2024",
+                    "fecha_envio": "2024-06-22",
+                    "canal_contacto": "email",
+                    "abrio_email": true,
+                    "clickeo_link": false,
+                    "compro": false,
+                    "primer_compra_campana": null
+                },
+                {
+                    "cliente_id": 108728,
+                    "campana": "verano_2024",
+                    "fecha_envio": "2024-06-22",
+                    "canal_contacto": "email",
+                    "abrio_email": true,
+                    "clickeo_link": false,
+                    "compro": false,
+                    "primer_compra_campana": null
+                },
+                {
+                    "cliente_id": 113748,
+                    "campana": "verano_2024",
+                    "fecha_envio": "2024-06-22",
+                    "canal_contacto": "email",
+                    "abrio_email": false,
+                    "clickeo_link": null,
+                    "compro": false,
+                    "primer_compra_campana": null
+                },
+                {
+                    "cliente_id": 108519,
+                    "campana": "verano_2024",
+                    "fecha_envio": "2024-06-29",
+                    "canal_contacto": "sms",
+                    "abrio_email": null,
+                    "clickeo_link": null,
+                    "compro": false,
+                    "primer_compra_campana": null
+                },
+                {
+                    "cliente_id": 101770,
+                    "campana": "verano_2024",
+                    "fecha_envio": "2024-06-29",
+                    "canal_contacto": "sms",
+                    "abrio_email": null,
+                    "clickeo_link": null,
+                    "compro": false,
+                    "primer_compra_campana": null
+                },
+                {
+                    "cliente_id": 106935,
+                    "campana": "verano_2024",
+                    "fecha_envio": "2024-06-22",
+                    "canal_contacto": "email",
+                    "abrio_email": false,
+                    "clickeo_link": null,
+                    "compro": false,
+                    "primer_compra_campana": null
+                },
+                {
+                    "cliente_id": 106537,
+                    "campana": "verano_2024",
+                    "fecha_envio": "2024-06-15",
+                    "canal_contacto": "email",
+                    "abrio_email": false,
+                    "clickeo_link": null,
+                    "compro": false,
+                    "primer_compra_campana": null
+                },
+                {
+                    "cliente_id": 108072,
+                    "campana": "verano_2024",
+                    "fecha_envio": "2024-06-16",
+                    "canal_contacto": "sms",
+                    "abrio_email": null,
+                    "clickeo_link": null,
+                    "compro": false,
+                    "primer_compra_campana": null
+                },
+                {
+                    "cliente_id": 114150,
+                    "campana": "verano_2024",
+                    "fecha_envio": "2024-06-21",
+                    "canal_contacto": "push",
+                    "abrio_email": null,
+                    "clickeo_link": null,
+                    "compro": false,
+                    "primer_compra_campana": null
+                },
+                {
+                    "cliente_id": 102460,
+                    "campana": "verano_2024",
+                    "fecha_envio": "2024-06-20",
+                    "canal_contacto": "push",
+                    "abrio_email": null,
+                    "clickeo_link": null,
+                    "compro": true,
+                    "primer_compra_campana": "2024-07-19"
+                }
+            ],
+            "identificadores": {
+                "columna": "cliente_id",
+                "ids_unicos": 14946,
+                "ids_totales": 15247,
+                "posibles_duplicados": 301
+            }
+        },
+        "ventas": {
+            "archivo": "campana_verano_ventas.csv",
+            "filas": 42891,
+            "numero_columnas": 9,
+            "columnas": [
+                "venta_id",
+                "cliente_id",
+                "producto_id",
+                "fecha_compra",
+                "cantidad",
+                "precio",
+                "descuento_pct",
+                "tienda_id",
+                "campana"
+            ],
+            "tipos_datos": {
+                "venta_id": "int64",
+                "cliente_id": "float64",
+                "producto_id": "int64",
+                "fecha_compra": "str",
+                "cantidad": "int64",
+                "precio": "str",
+                "descuento_pct": "float64",
+                "tienda_id": "int64",
+                "campana": "str"
+            },
+            "valores_nulos": {
+                "venta_id": 0,
+                "cliente_id": 847,
+                "producto_id": 0,
+                "fecha_compra": 0,
+                "cantidad": 0,
+                "precio": 0,
+                "descuento_pct": 0,
+                "tienda_id": 0,
+                "campana": 0
+            },
+            "filas_muestra": [
+                {
+                    "venta_id": 8017696,
+                    "cliente_id": 105049.0,
+                    "producto_id": 2229,
+                    "fecha_compra": "14/07/2024",
+                    "cantidad": 1,
+                    "precio": "9,89€",
+                    "descuento_pct": 20.0,
+                    "tienda_id": 2,
+                    "campana": "verano_2024"
+                },
+                {
+                    "venta_id": 8041225,
+                    "cliente_id": 101591.0,
+                    "producto_id": 2312,
+                    "fecha_compra": "18/07/2024",
+                    "cantidad": 1,
+                    "precio": "0,8€",
+                    "descuento_pct": 0.0,
+                    "tienda_id": 2,
+                    "campana": "verano_2024"
+                },
+                {
+                    "venta_id": 8034956,
+                    "cliente_id": 110687.0,
+                    "producto_id": 2167,
+                    "fecha_compra": "2024-08-05",
+                    "cantidad": 1,
+                    "precio": "4,27€",
+                    "descuento_pct": 0.0,
+                    "tienda_id": 2,
+                    "campana": "verano_2024"
+                },
+                {
+                    "venta_id": 8043455,
+                    "cliente_id": 102181.0,
+                    "producto_id": 3327,
+                    "fecha_compra": "2024-09-12",
+                    "cantidad": 2,
+                    "precio": "13,72€",
+                    "descuento_pct": 10.0,
+                    "tienda_id": 4,
+                    "campana": "verano_2024"
+                },
+                {
+                    "venta_id": 8019607,
+                    "cliente_id": 113737.0,
+                    "producto_id": 2039,
+                    "fecha_compra": "2024-08-04",
+                    "cantidad": 3,
+                    "precio": "23,25€",
+                    "descuento_pct": 10.0,
+                    "tienda_id": 3,
+                    "campana": "verano_2024"
+                },
+                {
+                    "venta_id": 8027360,
+                    "cliente_id": 106242.0,
+                    "producto_id": 2277,
+                    "fecha_compra": "2024-08-18",
+                    "cantidad": 2,
+                    "precio": "2,82€",
+                    "descuento_pct": 10.0,
+                    "tienda_id": 1,
+                    "campana": "verano_2024"
+                },
+                {
+                    "venta_id": 8005708,
+                    "cliente_id": 108400.0,
+                    "producto_id": 2321,
+                    "fecha_compra": "Jun 30, 2024",
+                    "cantidad": 1,
+                    "precio": "3,32€",
+                    "descuento_pct": 15.0,
+                    "tienda_id": 1,
+                    "campana": "verano_2024"
+                },
+                {
+                    "venta_id": 8027770,
+                    "cliente_id": 114937.0,
+                    "producto_id": 2114,
+                    "fecha_compra": "2024-06-27",
+                    "cantidad": 2,
+                    "precio": "0,87€",
+                    "descuento_pct": 0.0,
+                    "tienda_id": 3,
+                    "campana": "verano_2024"
+                },
+                {
+                    "venta_id": 8018214,
+                    "cliente_id": 104615.0,
+                    "producto_id": 2022,
+                    "fecha_compra": "2024-07-19",
+                    "cantidad": 2,
+                    "precio": "23,93€",
+                    "descuento_pct": 0.0,
+                    "tienda_id": 4,
+                    "campana": "verano_2024"
+                },
+                {
+                    "venta_id": 8023601,
+                    "cliente_id": 113476.0,
+                    "producto_id": 2159,
+                    "fecha_compra": "20/07/2024",
+                    "cantidad": 2,
+                    "precio": "24,36€",
+                    "descuento_pct": 0.0,
+                    "tienda_id": 3,
+                    "campana": "verano_2024"
+                }
+            ],
+            "muestras_columnas": {
+                "fecha_compra": [
+                    "14/07/2024",
+                    "18/07/2024",
+                    "2024-08-05",
+                    "2024-09-12",
+                    "2024-08-04",
+                    "2024-08-18",
+                    "Jun 30, 2024",
+                    "2024-06-27",
+                    "2024-07-19",
+                    "20/07/2024"
+                ],
+                "precio": [
+                    "9,89€",
+                    "0,8€",
+                    "4,27€",
+                    "13,72€",
+                    "23,25€",
+                    "2,82€",
+                    "3,32€",
+                    "0,87€",
+                    "23,93€",
+                    "24,36€"
+                ]
+            }
+        },
+        "productos": {
+            "archivo": "productos_promo_verano.csv",
+            "filas": 312,
+            "numero_columnas": 6,
+            "columnas": [
+                "producto_id",
+                "descuento_campana_pct",
+                "precio_promo",
+                "stock_reservado",
+                "fecha_inicio_promo",
+                "fecha_fin_promo"
+            ],
+            "tipos_datos": {
+                "producto_id": "int64",
+                "descuento_campana_pct": "float64",
+                "precio_promo": "float64",
+                "stock_reservado": "int64",
+                "fecha_inicio_promo": "str",
+                "fecha_fin_promo": "str"
+            },
+            "valores_nulos": {
+                "producto_id": 0,
+                "descuento_campana_pct": 0,
+                "precio_promo": 0,
+                "stock_reservado": 0,
+                "fecha_inicio_promo": 0,
+                "fecha_fin_promo": 0
+            },
+            "filas_muestra": [
+                {
+                    "producto_id": 3067,
+                    "descuento_campana_pct": 10.0,
+                    "precio_promo": 12.9,
+                    "stock_reservado": 200,
+                    "fecha_inicio_promo": "2024-07-02",
+                    "fecha_fin_promo": "2024-08-30"
+                },
+                {
+                    "producto_id": 2365,
+                    "descuento_campana_pct": 10.0,
+                    "precio_promo": 19.12,
+                    "stock_reservado": 150,
+                    "fecha_inicio_promo": "2024-07-02",
+                    "fecha_fin_promo": "2024-08-22"
+                },
+                {
+                    "producto_id": 2978,
+                    "descuento_campana_pct": 15.0,
+                    "precio_promo": 6.25,
+                    "stock_reservado": 200,
+                    "fecha_inicio_promo": "2024-06-25",
+                    "fecha_fin_promo": "2024-08-23"
+                },
+                {
+                    "producto_id": 2831,
+                    "descuento_campana_pct": 15.0,
+                    "precio_promo": 2.08,
+                    "stock_reservado": 500,
+                    "fecha_inicio_promo": "2024-06-17",
+                    "fecha_fin_promo": "2024-08-16"
+                },
+                {
+                    "producto_id": 3312,
+                    "descuento_campana_pct": 12.0,
+                    "precio_promo": 14.33,
+                    "stock_reservado": 200,
+                    "fecha_inicio_promo": "2024-06-20",
+                    "fecha_fin_promo": "2024-08-26"
+                },
+                {
+                    "producto_id": 3080,
+                    "descuento_campana_pct": 25.0,
+                    "precio_promo": 3.0,
+                    "stock_reservado": 500,
+                    "fecha_inicio_promo": "2024-06-24",
+                    "fecha_fin_promo": "2024-08-29"
+                },
+                {
+                    "producto_id": 3397,
+                    "descuento_campana_pct": 10.0,
+                    "precio_promo": 17.06,
+                    "stock_reservado": 300,
+                    "fecha_inicio_promo": "2024-07-14",
+                    "fecha_fin_promo": "2024-08-21"
+                },
+                {
+                    "producto_id": 3148,
+                    "descuento_campana_pct": 30.0,
+                    "precio_promo": 1.69,
+                    "stock_reservado": 150,
+                    "fecha_inicio_promo": "2024-06-18",
+                    "fecha_fin_promo": "2024-08-21"
+                },
+                {
+                    "producto_id": 2909,
+                    "descuento_campana_pct": 20.0,
+                    "precio_promo": 19.22,
+                    "stock_reservado": 750,
+                    "fecha_inicio_promo": "2024-07-04",
+                    "fecha_fin_promo": "2024-08-31"
+                },
+                {
+                    "producto_id": 3112,
+                    "descuento_campana_pct": 5.0,
+                    "precio_promo": 4.17,
+                    "stock_reservado": 200,
+                    "fecha_inicio_promo": "2024-06-16",
+                    "fecha_fin_promo": "2024-08-21"
+                }
+            ]
+        }
+    }
+}
