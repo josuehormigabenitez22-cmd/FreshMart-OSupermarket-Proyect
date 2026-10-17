@@ -2,8 +2,8 @@
 
 import json
 from pathlib import Path
-import pandas as pd
 
+import pandas as pd
 
 # Directorios del proyecto
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -36,13 +36,9 @@ def analizar_csv(
         "filas": len(df),
         "numero_columnas": len(df.columns),
         "columnas": list(df.columns),
-        "tipos_datos": {
-            columna: str(tipo)
-            for columna, tipo in df.dtypes.items()
-        },
+        "tipos_datos": {columna: str(tipo) for columna, tipo in df.dtypes.items()},
         "valores_nulos": {
-            columna: int(cantidad)
-            for columna, cantidad in df.isnull().sum().items()
+            columna: int(cantidad) for columna, cantidad in df.isnull().sum().items()
         },
         "filas_muestra": muestra,
     }
@@ -54,7 +50,7 @@ def analizar_csv(
         informe["identificadores"] = {
             "columna": columna_id,
             "ids_unicos": ids_unicos,
-            "ids_totales": int(len(df)),
+            "ids_totales": len(df),
             "posibles_duplicados": int(len(df) - ids_unicos),
         }
 
@@ -64,12 +60,7 @@ def analizar_csv(
 
         for columna in columnas_muestra:
             if columna in df.columns:
-                valores = (
-                    df[columna]
-                    .dropna()
-                    .head(filas_muestra)
-                    .tolist()
-                )
+                valores = df[columna].dropna().head(filas_muestra).tolist()
 
                 # Convertir tipos NumPy y otros valores a tipos JSON.
                 informe["muestras_columnas"][columna] = [

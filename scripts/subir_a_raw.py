@@ -1,9 +1,8 @@
-
 # Simular la estructura del data lake en local
 
 import shutil
-from pathlib import Path
 from datetime import date
+from pathlib import Path
 
 # Directorios del proyecto
 ROOT_DIR = Path(__file__).resolve().parent.parent
