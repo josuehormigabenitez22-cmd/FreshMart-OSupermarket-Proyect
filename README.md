@@ -137,6 +137,12 @@ python scripts/subir_a_raw.py
 
 Los archivos seleccionados se copiarán a la estructura local de `freshmart-lake/raw/`.
 
+## Activar el entorno virtual
+
+```bash
+.\.venv\Scripts\Activate.ps1
+```
+
 ## 🗺️ Roadmap
 
 - [x] Crear la estructura inicial del proyecto.
@@ -166,6 +172,10 @@ Este proyecto busca consolidar conocimientos prácticos en:
 
 Proyecto personal desarrollado como parte de mi portfolio de Data Engineering y mi proceso de aprendizaje en arquitectura y procesamiento de datos.
 
-## 📄 Licencia
+## License
 
-La licencia del proyecto está pendiente de definir.
+This project is proprietary and all rights are reserved.
+Viewing the repository for portfolio evaluation does not
+grant permission to reuse, modify, or distribute its contents.
+
+See [LICENSE](LICENSE) for details.
