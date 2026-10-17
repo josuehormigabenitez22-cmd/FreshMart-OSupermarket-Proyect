@@ -1,6 +1,10 @@
 # Data
 data/
 freshmart-lake/raw/marketing/
+freshmart-lake/
+src/freshmart_osupermarket.egg-info/
+freshmart-lake/silver/
+freshmart-lake/gold/
 
 # Python
 __pycache__/
