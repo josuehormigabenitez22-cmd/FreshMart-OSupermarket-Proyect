@@ -1,13 +1,51 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "freshmart-osupermarket"
 version = "0.1.0"
+description = "Pipeline de datos de FreshMart: raw, silver y gold de campañas de Marketing."
+readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "pandas",
-    "pyarrow",
-    "duckdb",
-    "pytest",
-    "ruff",
-    "mypy",
+    "pandas>=3.0",
+    "pyarrow>=20",
+    "duckdb>=1.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "ruff>=0.14",
+    "mypy>=1.10",
+    "pandas-stubs",
+    "pre-commit>=3",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["src"]
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["duckdb.*", "pyarrow.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "integration: usa los CSV reales de data/ o recorre el pipeline completo",
 ]

@@ -1,19 +1,40 @@
+.PHONY: setup install lint format test test-unit check raw segment pipeline
 
-.PHONY: install lint format test check
+PYTHON ?= python
+DATA ?= data
+LAKE ?= freshmart-lake
+
+setup:
+	$(PYTHON) -m venv .venv
+	.venv/bin/python -m pip install -e ".[dev]"
+	.venv/bin/pre-commit install
 
 install:
-	python -m pip install -e ".[dev]"
+	$(PYTHON) -m pip install -e ".[dev]"
 
 lint:
-	ruff check .
+	$(PYTHON) -m ruff check .
+	$(PYTHON) -m ruff format --check .
+	$(PYTHON) -m mypy
 
 format:
-	ruff format .
+	$(PYTHON) -m ruff check --fix .
+	$(PYTHON) -m ruff format .
 
 test:
-	pytest
+	$(PYTHON) -m pytest
 
-check:
-	ruff check .
-	ruff format --check .
-	pytest
+test-unit:
+	$(PYTHON) -m pytest -m "not integration"
+
+check: lint test
+
+raw:
+	$(PYTHON) scripts/subir_a_raw.py --input $(DATA) --output $(LAKE)/raw
+
+segment:
+	$(PYTHON) scripts/segmentar.py --input $(DATA) --verify
+
+pipeline:
+	$(PYTHON) scripts/ejecutar_pipeline.py --campaign verano --input $(DATA) --silver-dir $(LAKE)/silver
+	$(PYTHON) scripts/ejecutar_pipeline.py --campaign primavera --input $(DATA) --silver-dir $(LAKE)/silver
