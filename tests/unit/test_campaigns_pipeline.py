@@ -1,15 +1,12 @@
-import argparse
 from pathlib import Path
 
 import pandas as pd
-import pytest
 
 from freshmart.campaigns.config import Campaign
 from freshmart.campaigns.pipeline import (
     PARQUET_FILE,
     SILVER_TABLE,
     escribir_silver,
-    parse_campaign,
     partition_dir,
 )
 
@@ -57,13 +54,3 @@ def test_escribir_silver_no_toca_otras_particiones(tmp_path: Path) -> None:
     escribir_silver(_df(), tmp_path, Campaign.VERANO)
     despues = (partition_dir(tmp_path, Campaign.PRIMAVERA) / PARQUET_FILE).read_bytes()
     assert antes == despues
-
-
-def test_parse_campaign_acepta_valor_del_enum_y_nombre_corto() -> None:
-    assert parse_campaign("verano_2024") is Campaign.VERANO
-    assert parse_campaign("primavera") is Campaign.PRIMAVERA
-
-
-def test_parse_campaign_desconocida_da_error() -> None:
-    with pytest.raises(argparse.ArgumentTypeError, match="otoño"):
-        parse_campaign("otoño")

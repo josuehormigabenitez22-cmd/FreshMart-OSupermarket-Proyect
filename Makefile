@@ -36,5 +36,4 @@ segment:
 	$(PYTHON) scripts/segmentar.py --input $(DATA) --verify
 
 pipeline:
-	$(PYTHON) scripts/ejecutar_pipeline.py --campaign verano --input $(DATA) --silver-dir $(LAKE)/silver
-	$(PYTHON) scripts/ejecutar_pipeline.py --campaign primavera --input $(DATA) --silver-dir $(LAKE)/silver
+	$(PYTHON) scripts/ejecutar_pipeline.py --all --input $(DATA) --silver-dir $(LAKE)/silver

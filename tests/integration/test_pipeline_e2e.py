@@ -5,12 +5,12 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from freshmart.campaigns.cli import main
 from freshmart.campaigns.config import Campaign
 from freshmart.campaigns.pipeline import (
     PARQUET_FILE,
     SILVER_TABLE,
     PipelineValidationError,
-    main,
     partition_dir,
     run_pipeline,
 )
@@ -177,6 +177,36 @@ def test_e2e_cli_codigo_de_salida_y_salida_por_pantalla(
     salida = capsys.readouterr().out
     assert "5/6 OK" in salida
     assert "Silver NO modificado" in salida
+
+
+def test_e2e_cli_all_procesa_todas_las_campanas(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    entrada, silver = tmp_path / "in", tmp_path / "silver"
+    _escribir(entrada, "campana_verano_ventas.csv", VERANO_OK)
+    _escribir(entrada, "campana_primavera_ventas.csv", PRIMAVERA_OK)
+
+    codigo = main(["--all", "--input", str(entrada), "--silver-dir", str(silver)])
+
+    assert codigo == 0
+    assert "Campañas OK: 2/2" in capsys.readouterr().out
+    df = pd.read_parquet(silver / SILVER_TABLE)
+    assert set(df["campana"].astype(str)) == {"verano", "primavera"}
+
+
+def test_e2e_cli_all_una_campana_fallida_no_bloquea_a_la_otra(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    entrada, silver = tmp_path / "in", tmp_path / "silver"
+    _escribir(entrada, "campana_verano_ventas.csv", VERANO_FECHA_VACIA)
+    _escribir(entrada, "campana_primavera_ventas.csv", PRIMAVERA_OK)
+
+    codigo = main(["--all", "--input", str(entrada), "--silver-dir", str(silver)])
+
+    assert codigo == 1
+    assert "Campañas OK: 1/2" in capsys.readouterr().out
+    assert not partition_dir(silver, Campaign.VERANO).exists()
+    assert (partition_dir(silver, Campaign.PRIMAVERA) / PARQUET_FILE).is_file()
 
 
 def test_cli_exige_paths_por_argumentos(tmp_path: Path) -> None:
