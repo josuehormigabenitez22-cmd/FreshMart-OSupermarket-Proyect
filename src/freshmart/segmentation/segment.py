@@ -1,4 +1,8 @@
-"""Segmentación de clientes por pedidos de los últimos 3 meses.
+"""Segmentación de los clientes de la campaña por pedidos de los últimos 3 meses.
+
+La base es la lista de la campaña (``campana_verano_clientes.csv``), con una fila por
+cliente: la lista trae 15.247 filas porque un cliente aparece una vez por canal, pero son
+14.946 clientes. Nombre y fecha de registro salen de la maestra (``clientes.csv``).
 
 La misma lógica existe dos veces a propósito: en pandas (este módulo) y en SQL
 (``sql/segmentacion_campana.sql``, ejecutado con DuckDB). ``verificar`` comprueba
@@ -17,6 +21,7 @@ from freshmart.settings import DATA_DIR, SEGMENTATION_PATH, SQL_DIR
 FECHA_CORTE = date(2024, 9, 16)
 REGISTRADOS_DESDE = pd.Timestamp("2024-06-01")
 SQL_PATH = SQL_DIR / "segmentacion_campana.sql"
+CAMPANA_CSV = "campana_verano_clientes.csv"
 
 UMBRAL_PREMIUM = 7
 UMBRAL_REGULAR = 2
@@ -96,16 +101,28 @@ def segmentar_pandas(
     fecha_corte: date = FECHA_CORTE,
 ) -> pd.DataFrame:
     # Trampa 3: codigo_postal como str (y todo lo demás también, parseamos a mano).
+    campana = pd.read_csv(data_dir / CAMPANA_CSV, dtype=str)
     clientes = pd.read_csv(data_dir / "clientes.csv", dtype=str)
     pedidos = pd.read_csv(data_dir / "pedidos.csv", dtype=str)
+
+    # Base: una fila por cliente de la campaña (la lista repite por canal).
+    base = (
+        pd.to_numeric(campana["cliente_id"])
+        .astype("int64")
+        .drop_duplicates()
+        .to_frame()
+    )
 
     unicos = deduplicar_clientes(clientes)
     unicos["cliente_id"] = unicos["cliente_id"].astype("int64")
 
     conteo = contar_pedidos_3m(pedidos, fecha_corte)
 
-    # Trampa 1: el join es LEFT para no perder a los clientes sin pedidos.
-    df = unicos.merge(conteo, left_on="cliente_id", right_index=True, how="left")
+    # Trampa 1: los dos joins son LEFT para no perder a los clientes de la campaña
+    # sin ficha en la maestra ni a los que no tienen pedidos.
+    df = base.merge(unicos, on="cliente_id", how="left").merge(
+        conteo, left_on="cliente_id", right_index=True, how="left"
+    )
     df["pedidos_3m"] = df["pedidos_3m"].fillna(0).astype("int64")
     df["fecha_registro"] = pd.to_datetime(df["fecha_registro"], format="%Y-%m-%d")
     df["segmento_calculado"] = asignar_segmento(df["pedidos_3m"])
@@ -121,6 +138,7 @@ def segmentar_sql(
     con = duckdb.connect()
     try:
         for vista, archivo in (
+            ("campana_raw", CAMPANA_CSV),
             ("clientes_raw", "clientes.csv"),
             ("pedidos_raw", "pedidos.csv"),
         ):

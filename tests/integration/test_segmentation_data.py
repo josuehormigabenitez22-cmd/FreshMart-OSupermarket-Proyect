@@ -3,18 +3,18 @@
 import pandas as pd
 import pytest
 
-from freshmart.segmentation.segment import resumen, verificar
+from freshmart.segmentation.segment import CAMPANA_CSV, resumen, verificar
 from freshmart.settings import DATA_DIR
 
 pytestmark = pytest.mark.skipif(
-    not (DATA_DIR / "clientes.csv").exists() or not (DATA_DIR / "pedidos.csv").exists(),
+    not all(
+        (DATA_DIR / f).exists() for f in (CAMPANA_CSV, "clientes.csv", "pedidos.csv")
+    ),
     reason="Faltan los CSV reales en data/",
 )
 
-# Cifras verificadas sobre clientes DEDUPLICADOS (14.946 clientes únicos).
-# Las del curso (2.499 / 1.975 / 10.773 / 6.782 / 349) suman 15.247, que es el
-# número de filas de clientes.csv CON duplicados: salen de no deduplicar.
-CIFRAS_REALES = {
+# Una fila por cliente de la campaña: 14.946 clientes.
+CIFRAS_POR_CLIENTE = {
     "clientes": 14_946,
     "premium": 2_442,
     "regular": 1_938,
@@ -23,10 +23,27 @@ CIFRAS_REALES = {
     "sin_pedidos_desde_junio": 345,
 }
 
+# Las cifras del curso (2.499 / 1.975 / 10.773, 6.782 sin pedidos, 349 desde junio)
+# no salen de olvidar deduplicar la maestra: cuentan las 15.247 FILAS de la lista de la
+# campaña, donde un cliente aparece una vez por canal de contacto.
+CIFRAS_POR_CONTACTO = {
+    "clientes": 15_247,
+    "premium": 2_499,
+    "regular": 1_975,
+    "nuevo": 10_773,
+    "sin_pedidos": 6_782,
+    "sin_pedidos_desde_junio": 349,
+}
 
-def test_cifras_reales_y_pandas_igual_a_sql() -> None:
-    df = verificar()
-    assert resumen(df) == CIFRAS_REALES
+
+def test_cifras_por_cliente_y_pandas_igual_a_sql() -> None:
+    assert resumen(verificar()) == CIFRAS_POR_CLIENTE
+
+
+def test_contando_contactos_de_la_campana_salen_las_cifras_del_curso() -> None:
+    contactos = pd.read_csv(DATA_DIR / CAMPANA_CSV, usecols=["cliente_id"])
+    por_contacto = contactos.merge(verificar(), on="cliente_id", how="left")
+    assert resumen(por_contacto) == CIFRAS_POR_CONTACTO
 
 
 @pytest.mark.skipif(

@@ -21,6 +21,19 @@ CLIENTES = """cliente_id,nombre,telefono,fecha_registro,codigo_postal
 3,Cris,+34333,2022-05-05,46008
 4,Dani,+34444,2021-03-03,41015
 5,Eli,+34555,2024-02-02,48011
+6,Fede,+34666,2020-01-01,08001
+"""
+
+# Lista de la campaña: Beto aparece por dos canales, Fede (6) no recibió la campaña
+# y el 7 está en la campaña pero no tiene ficha en la maestra.
+CAMPANA = """cliente_id,canal_contacto
+1,email
+2,email
+2,sms
+3,email
+4,push
+5,email
+7,sms
 """
 
 
@@ -54,6 +67,7 @@ def _pedidos() -> str:
 
 @pytest.fixture
 def data_dir(tmp_path: Path) -> Path:
+    (tmp_path / "campana_verano_clientes.csv").write_text(CAMPANA, encoding="utf-8")
     (tmp_path / "clientes.csv").write_text(CLIENTES, encoding="utf-8")
     (tmp_path / "pedidos.csv").write_text(_pedidos(), encoding="utf-8")
     return tmp_path
@@ -76,24 +90,27 @@ def test_parsear_fechas_falla_si_no_reconoce_el_formato() -> None:
 def test_segmentacion_pandas(data_dir: Path) -> None:
     df = segmentar_pandas(data_dir, CORTE).set_index("cliente_id")
 
-    # Deduplicado: Beto aparece una sola vez. LEFT JOIN: Ana (sin pedidos) está.
-    assert len(df) == 5
+    # Base = campaña: Beto una sola vez aunque venga por dos canales y por dos filas de
+    # la maestra; Fede fuera (no recibió la campaña); el 7 dentro aunque no tenga ficha.
+    assert df.index.tolist() == [1, 2, 3, 4, 5, 7]
     assert df.loc[1, "pedidos_3m"] == 0
     assert df.loc[3, "pedidos_3m"] == 7  # el cancelado no cuenta
     assert df.loc[4, "pedidos_3m"] == 2  # la fecha dd/mm se lee bien
     assert df.loc[5, "pedidos_3m"] == 1  # borde inferior sí, superior no
+    assert pd.isna(df.loc[7, "nombre"])
     assert df["segmento_calculado"].to_dict() == {
         1: "nuevo",
         2: "nuevo",
         3: "premium",
         4: "regular",
         5: "nuevo",
+        7: "nuevo",
     }
 
 
 def test_pandas_y_sql_dan_lo_mismo(data_dir: Path) -> None:
     resultado = verificar(data_dir, CORTE)  # lanza AssertionError si difieren
-    assert len(resultado) == 5
+    assert len(resultado) == 6
 
 
 def test_sql_aplica_las_mismas_reglas(data_dir: Path) -> None:
@@ -105,10 +122,10 @@ def test_sql_aplica_las_mismas_reglas(data_dir: Path) -> None:
 
 def test_resumen(data_dir: Path) -> None:
     assert resumen(segmentar_pandas(data_dir, CORTE)) == {
-        "clientes": 5,
+        "clientes": 6,
         "premium": 1,
         "regular": 1,
-        "nuevo": 3,
-        "sin_pedidos": 2,  # Ana y Beto
-        "sin_pedidos_desde_junio": 1,  # solo Ana se registró desde junio
+        "nuevo": 4,
+        "sin_pedidos": 3,  # Ana, Beto y el 7
+        "sin_pedidos_desde_junio": 1,  # solo Ana; el 7 no tiene fecha de registro
     }
