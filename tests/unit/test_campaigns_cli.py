@@ -2,7 +2,7 @@ import argparse
 
 import pytest
 
-from freshmart.campaigns.cli import crear_parser, parse_campaign
+from freshmart.campaigns.cli import crear_parser, main, parse_campaign
 from freshmart.campaigns.config import Campaign
 
 PATHS = ["--input", "in", "--silver-dir", "silver"]
@@ -39,3 +39,31 @@ def test_parser_exige_exactamente_campaign_o_all(seleccion: list[str]) -> None:
     with pytest.raises(SystemExit) as excinfo:
         crear_parser().parse_args([*seleccion, *PATHS])
     assert excinfo.value.code == 2
+
+
+@pytest.mark.parametrize(
+    "argumentos",
+    [
+        ["--only-gold", "--silver-dir", "s"],  # falta --gold-dir
+        ["--catalog", "--silver-dir", "s"],  # falta --input
+        ["--all", "--silver-dir", "s"],  # falta --input
+        ["--only-gold", "--catalog", "--silver-dir", "s", "--gold-dir", "g"],
+    ],
+    ids=[
+        "only_gold_sin_gold_dir",
+        "catalog_sin_input",
+        "all_sin_input",
+        "dos_acciones",
+    ],
+)
+def test_main_rechaza_combinaciones_invalidas(argumentos: list[str]) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        main(argumentos)
+    assert excinfo.value.code == 2
+
+
+def test_only_gold_no_necesita_input() -> None:
+    args = crear_parser().parse_args(
+        ["--only-gold", "--silver-dir", "s", "--gold-dir", "g"]
+    )
+    assert args.only_gold and args.input is None
