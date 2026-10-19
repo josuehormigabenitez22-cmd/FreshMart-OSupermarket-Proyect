@@ -16,8 +16,8 @@ from pathlib import Path
 import pandas as pd
 
 from freshmart.campaigns.clean import normalizar_enteros
-from freshmart.campaigns.validate import ResultadoValidacion
 from freshmart.lake.parquet import escribir_parquet_atomico
+from freshmart.quality.result import ResultadoValidacion
 
 logger = logging.getLogger(__name__)
 

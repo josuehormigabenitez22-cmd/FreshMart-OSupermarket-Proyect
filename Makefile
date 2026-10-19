@@ -1,4 +1,4 @@
-.PHONY: setup install lint format test test-unit check raw segment pipeline dashboard
+.PHONY: setup install lint format test test-unit check raw segment pipeline dashboard validate gaps
 
 PYTHON ?= python
 DATA ?= data
@@ -41,3 +41,11 @@ pipeline:
 
 dashboard:
 	$(PYTHON) scripts/dashboard.py --gold-dir $(LAKE)/gold --input $(DATA)
+
+validate:
+	$(PYTHON) scripts/validar_csv.py $(DATA)/campana_verano_ventas.csv --campaign verano
+	$(PYTHON) scripts/validar_csv.py $(DATA)/campana_primavera_ventas.csv --campaign primavera
+
+gaps:
+	$(PYTHON) -m freshmart.quality.gap_detection --gold-dir $(LAKE)/gold --campaign verano
+	$(PYTHON) -m freshmart.quality.gap_detection --gold-dir $(LAKE)/gold --campaign primavera
