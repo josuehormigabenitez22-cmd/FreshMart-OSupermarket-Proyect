@@ -1,220 +1,140 @@
-# FreshMart — Online Supermarket Data Engineering Project
+# FreshMart
 
-**Estado:** En desarrollo 🚧 — el avance detallado está en [`PROGRESO.md`](PROGRESO.md).
+Pipeline de datos para un supermercado online ficticio, hecho como proyecto de portfolio de
+Data Engineering.
 
-## Descripción
+## ¿Qué hace?
 
-**FreshMart** es un proyecto personal de Data Engineering basado en un supermercado online
-ficticio. Reproduce la primera semana de un Junior Data Engineer: ingesta de los CSV de
-Marketing a un data lake local, segmentación de clientes, limpieza configurable por campaña,
-validaciones de calidad, una capa silver en Parquet y una capa gold con las métricas de
-campaña para Marketing. El dashboard es el siguiente paso.
+FreshMart recibe datos de varios equipos: CSV de campañas de Marketing, el catálogo de
+productos, el inventario diario de las tiendas y los pedidos de la base de datos de la tienda
+online. Este proyecto los lleva a un data lake ordenado por capas para que se puedan consultar
+con confianza.
 
-> Proyecto con fines educativos y de portfolio. FreshMart es un escenario ficticio y los datos
-> se usan como material de práctica.
+- **raw**: copia exacta de cada archivo, sin tocar, con un manifest que registra su huella
+  (sha256). Si se vuelve a subir lo mismo, no cambia nada.
+- **silver**: los datos limpios y validados en Parquet. Cada campaña trae su propio formato
+  (nombres de columna, fechas, precios), y una configuración por campaña lo lleva todo al mismo
+  esquema. Si falla una validación de tabla, no se escribe nada. Las filas imposibles, como un
+  stock negativo o un total que no cuadra, no se borran: se apartan a una cuarentena con el
+  motivo.
+- **gold**: las métricas que usa negocio, como el rendimiento diario de cada campaña, los
+  productos más vendidos o el estado del stock por tienda. Cada métrica se calcula en pandas y
+  en SQL, y un test comprueba que los dos resultados coinciden.
 
-## Arquitectura
+Alrededor del pipeline hay un validador que revisa los CSV antes de procesarlos, una alerta a
+Slack cuando falta algún día en gold y tres DAGs de Airflow que lo ejecutan todo de forma
+programada.
 
-```text
-data/*.csv ──► raw/ (originales, inmutables) ──► silver/ (limpio, Parquet) ──► gold/ (agregado)
-```
+## Cómo ejecutarlo
 
-- **raw**: copia exacta de cada CSV en `raw/{fuente}/{tabla}/{AAAA}/{MM}/{DD}/`, con un
-  `_manifest.json` (sha256 y fecha de ingesta). Ejecutar la ingesta dos veces no cambia nada.
-- **silver**: ventas de campaña limpias y validadas en
-  `silver/campaign_ventas/campana=<verano|primavera>/part-0.parquet`, y el catálogo en
-  `silver/productos/` y `silver/categorias/`. Si una validación falla, no se escribe nada.
-- **gold**: `gold/campaign_performance/` (una fila por campaña y día: revenue bruto y neto,
-  transacciones, clientes, ticket medio y acumulados) y `gold/campaign_top_products/` (top 50
-  productos por revenue neto en cada campaña). La misma lógica está en pandas y en SQL
-  (`sql/gold_*.sql`), y un test exige que coincidan. Por qué esta granularidad:
-  [`docs/decisions/001-granularidad-gold.md`](docs/decisions/001-granularidad-gold.md).
-
-## Tecnologías
-
-Python 3.11 · pandas · pyarrow (Parquet) · DuckDB (SQL local) · pytest · ruff · mypy · pre-commit
-
-## Estructura
-
-```text
-FreshMart-OSupermarket-Proyect/
-├── src/freshmart/
-│   ├── settings.py              # Rutas (sobrescribibles por variables de entorno)
-│   ├── logging_config.py        # Formato de logs común
-│   ├── lake/                    # Ingesta inmutable a raw + manifest
-│   ├── exploration/             # Perfilado de CSV → reports/exploracion_campana.json
-│   ├── segmentation/            # Segmentación de clientes (pandas, verificada contra SQL)
-│   ├── catalog/                 # Silver de productos y categorías
-│   ├── campaigns/               # config, clean, validate, pipeline (→ silver), gold, cli
-│   ├── dashboard/               # Las 4 cards de Metabase ejecutadas con DuckDB
-│   ├── quality/                 # Validador de CSV, cuarentena, gaps y alertas a Slack
-│   ├── inventory/               # Inventario diario: silver (con cuarentena) y gold por tienda
-│   ├── orders/                  # Extracción diaria de pedidos y líneas de pedido a silver
-│   └── orchestration/           # Tareas que ejecutan los DAGs (sin depender de Airflow)
-├── dags/                        # DAGs de Airflow (sin credenciales)
-├── sql/                         # Consultas SQL (DuckDB)
-├── scripts/                     # Puntos de entrada de línea de comandos
-├── tests/
-│   ├── unit/                    # Rápidos, con datos sintéticos
-│   └── integration/             # Pipeline completo y CSV reales (se saltan sin data/)
-├── docs/                        # Documentación: decisions/ (ADR), incidents/ (postmortems)
-├── reports/                     # Informes generados
-├── data/                        # CSV de entrada (no versionados)
-└── freshmart-lake/              # Lake local raw/silver/gold (no versionado)
-```
-
-## Instalación
-
-Requisitos: Python 3.11+ y Git. Los CSV del caso van en `data/` (no están en el repositorio).
+Necesitas Python 3.11 o superior. Los CSV del caso van en `data/` (no están en el repositorio).
 
 ```powershell
-git clone <URL_DEL_REPOSITORIO>
+git clone https://github.com/josuehormigabenitez22-cmd/FreshMart-OSupermarket-Proyect.git
 cd FreshMart-OSupermarket-Proyect
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1          # macOS/Linux: source .venv/bin/activate
+.\.venv\Scripts\Activate.ps1        # en macOS/Linux: source .venv/bin/activate
 python -m pip install -e ".[dev]"
-pre-commit install
 ```
 
-Configuración opcional: copia `.env.example` y exporta las variables que quieras cambiar
-(rutas del lake, nivel de log).
+Con el entorno activado, este es el orden para montar el lake completo:
 
-## Uso
+```powershell
+# 1. Copiar los CSV a raw
+python scripts/subir_a_raw.py
 
-Con el entorno activado, desde la raíz del repo:
+# 2. Catálogo a silver (lo necesitan gold, el inventario y las líneas de pedido)
+python scripts/ejecutar_pipeline.py --catalog --input data --silver-dir freshmart-lake/silver
 
-| Tarea | Comando |
-|---|---|
-| Explorar los CSV de verano | `python scripts/explorar_campana.py` |
-| Subir los CSV a raw | `python scripts/subir_a_raw.py` |
-| Segmentación (pandas == SQL) | `python scripts/segmentar.py --verify` |
-| Pipeline de una campaña a silver | `python scripts/ejecutar_pipeline.py --campaign verano --input data --silver-dir freshmart-lake/silver` |
-| Pipeline de todas las campañas | `python scripts/ejecutar_pipeline.py --all --input data --silver-dir freshmart-lake/silver` |
-| Catálogo (productos y categorías) a silver | `python scripts/ejecutar_pipeline.py --catalog --input data --silver-dir freshmart-lake/silver` |
-| Campañas a silver y después gold | `python scripts/ejecutar_pipeline.py --all --input data --silver-dir freshmart-lake/silver --gold-dir freshmart-lake/gold` |
-| Solo gold (con silver ya construido) | `python scripts/ejecutar_pipeline.py --only-gold --silver-dir freshmart-lake/silver --gold-dir freshmart-lake/gold` |
-| Las 4 cards del dashboard | `python scripts/dashboard.py --gold-dir freshmart-lake/gold --input data` |
-| Validar un CSV antes de subirlo | `python scripts/validar_csv.py data/campana_verano_ventas.csv --campaign verano` |
-| Detectar días sin datos en gold | `python -m freshmart.quality.gap_detection --gold-dir freshmart-lake/gold --campaign verano` |
-| Inventario a silver y gold | `python -m freshmart.inventory.cli --input data --silver-dir freshmart-lake/silver --gold-dir freshmart-lake/gold` |
-| Líneas de pedido a silver | `python -m freshmart.orders.lineas --input data --silver-dir freshmart-lake/silver` |
+# 3. Campañas a silver y después gold
+python scripts/ejecutar_pipeline.py --all --input data --silver-dir freshmart-lake/silver --gold-dir freshmart-lake/gold
 
-Orden la primera vez: `--catalog` y luego `--all` con `--gold-dir` (gold necesita el catálogo).
+# 4. Inventario y líneas de pedido
+python -m freshmart.inventory.cli --input data --silver-dir freshmart-lake/silver --gold-dir freshmart-lake/gold
+python -m freshmart.orders.lineas --input data --silver-dir freshmart-lake/silver
 
-`--campaign` admite `verano` o `primavera`. Con `--all`, cada campaña es independiente: si una
-falla la validación, su partición no se toca, las demás se escriben y el código de salida es 1.
-En ese caso gold **no** se reconstruye. Las rutas son obligatorias: no hay paths escritos en el
-código del pipeline.
+# 5. Consultar los resultados
+python scripts/dashboard.py --gold-dir freshmart-lake/gold --input data
+python scripts/segmentar.py --verify
+```
 
-Resultado esperado con los datos del caso: verano 42.733 filas y primavera 31.204 (6/6
-validaciones cada una); gold con 166 filas en `campaign_performance` y revenue neto de
-996.555 € (verano) y 750.622 € (primavera).
+Otros comandos útiles:
 
-### Calidad de entrada y monitorización
+```powershell
+python scripts/validar_csv.py data/campana_verano_ventas.csv --campaign verano
+python -m freshmart.quality.gap_detection --gold-dir freshmart-lake/gold --campaign verano
+pytest                  # todos los tests
+ruff check . ; mypy     # lint y tipos
+```
 
-- **Antes de procesar** un CSV, `validar_csv.py` comprueba columnas, tipos, nulos y
-  duplicados con el esquema de la campaña. Los errores impiden procesarlo (código de salida 1);
-  los avisos (varios formatos de fecha, duplicados exactos) se informan.
-- **Después**, `gap_detection` busca días sin filas en `gold.campaign_performance`: un pipeline
-  puede terminar en verde sin escribir nada. Sin `--desde`/`--hasta` revisa los huecos internos;
-  con `--alert` avisa a Slack usando el webhook de la variable `SLACK_WEBHOOK_URL`. Sin gaps no
-  se envía nada.
+Si tienes `make` (Linux, macOS o Git Bash), `make pipeline`, `make test` y `make check` hacen lo
+mismo. Las rutas y el webhook de Slack se pueden cambiar con las variables de `.env.example`.
 
-Los dos usan el mismo resultado de validación (`freshmart.quality.result`) que el pipeline.
+## Cómo funciona
 
-### Inventario y líneas de pedido (operaciones)
+```mermaid
+flowchart LR
+    subgraph Fuentes
+        CSV["CSV de Marketing<br/>campañas · clientes"]
+        CAT["Catálogo<br/>productos · categorías"]
+        OPS["Operaciones<br/>inventario · líneas de pedido"]
+        PG[("PostgreSQL<br/>pedidos")]
+    end
 
-Siguen el mismo esquema que las campañas, con una diferencia: las **filas imposibles** (stock
-negativo, precio negativo, total de línea que no cuadra) no bloquean la tabla ni se borran. Van a
-`silver/_cuarentena/<tabla>/` con su motivo para revisarlas con negocio
-([ADR 005](docs/decisions/005-cuarentena.md)). Los problemas de tabla (vacía, clave repetida)
-siguen impidiendo escribir. Con los datos del caso: inventario 17.525 filas y 34 en cuarentena;
-líneas 142.204 filas y 172 en cuarentena.
+    VAL{{"Validador de CSV"}}
 
-### DAGs de Airflow
+    subgraph Lake["freshmart-lake"]
+        RAW[("raw<br/>originales + manifest")]
+        SIL[("silver<br/>Parquet limpio")]
+        CUA[("silver/_cuarentena<br/>filas apartadas")]
+        GOLD[("gold<br/>métricas")]
+    end
+
+    subgraph Salidas
+        DASH["Dashboard<br/>4 cards con DuckDB"]
+        SEG["Segmentación<br/>de clientes"]
+        SLACK["Alerta a Slack<br/>días sin datos"]
+    end
+
+    CSV & CAT & OPS --> RAW
+    PG -- "DAG raw_orders_daily" --> RAW
+    CSV --> VAL --> SIL
+    CAT --> SIL
+    OPS --> SIL
+    OPS -. "filas imposibles" .-> CUA
+    SIL --> GOLD
+    GOLD --> DASH
+    GOLD --> SLACK
+    CSV --> SEG
+```
+
+Tres DAGs de Airflow lo ejecutan de forma programada:
 
 | DAG | Cuándo | Qué hace |
 |---|---|---|
-| `campaign_pipeline_weekly` | lunes 06:00 | Valida los CSV de campaña, construye silver (campañas y catálogo) y gold, y busca gaps con alerta a Slack |
-| `operations_daily` | cada día 05:00 | Catálogo, inventario (silver + gold por tienda) y líneas de pedido |
-| `raw_orders_daily` | cada día 03:00 | Pedidos del día anterior de PostgreSQL a raw (ver abajo) |
+| `raw_orders_daily` | cada día a las 03:00 | Copia los pedidos del día anterior de PostgreSQL a raw |
+| `operations_daily` | cada día a las 05:00 | Catálogo, inventario y líneas de pedido |
+| `campaign_pipeline_weekly` | los lunes a las 06:00 | Valida los CSV de campaña, construye silver y gold y busca días sin datos |
 
-Los dos primeros leen las rutas de las Variables de Airflow `freshmart_input_dir` y
-`freshmart_lake_dir`. Toda su lógica está en `freshmart.orchestration.tasks`, que no importa
-Airflow y se testea como el resto.
+Los DAGs no guardan credenciales: la conexión a PostgreSQL es una Connection de Airflow y las
+rutas son Variables. Toda la lógica está en `src/freshmart/` y se puede probar sin Airflow.
 
-### DAG `raw_orders_daily` (Airflow)
+Para entrar en detalle: [diccionario de datos](docs/data_dictionary.md),
+[decisiones técnicas](docs/decisions/), [cómo añadir una campaña](docs/playbook_nueva_campana.md)
+y [avance del proyecto](PROGRESO.md).
 
-`dags/raw_orders_daily.py` extrae cada noche los pedidos del día anterior de PostgreSQL a
-`s3://freshmart-lake/raw/orders/orders/AAAA/MM/DD/`. No contiene credenciales: la conexión es la
-Airflow Connection `freshmart_orders_ro`, pensada para leerse de AWS Secrets Manager. Los
-requisitos de despliegue y cómo relanzar días caídos están en el docstring del DAG. Contexto del
-incidente que lo motivó: [`docs/incidents/DATA-162_postmortem.md`](docs/incidents/DATA-162_postmortem.md).
+## Licencia
 
-Airflow no es una dependencia del proyecto: la lógica de extracción está en
-`freshmart.orders.raw_orders` y se testea sin él, y `tests/unit/test_dags.py` impide que entren
-credenciales o SQL formateado en `dags/`.
+Este proyecto **no es open source**. Es un proyecto de portfolio con todos los derechos
+reservados: puedes ver el código para evaluarlo, pero no copiarlo, modificarlo, redistribuirlo
+ni usarlo comercialmente sin permiso por escrito. Los detalles están en [LICENSE](LICENSE).
 
-## Calidad
-
-| Comprobación | Comando | `make` (Linux/macOS/Git Bash) |
-|---|---|---|
-| Lint + formato + tipos | `ruff check .` · `ruff format --check .` · `mypy` | `make lint` |
-| Todos los tests | `pytest` | `make test` |
-| Solo unitarios | `pytest -m "not integration"` | `make test-unit` |
-| Todo | — | `make check` |
-
-Los hooks de pre-commit ejecutan ruff y mypy antes de cada commit. mypy corre en modo `strict`
-sobre `src/`.
-
-## Añadir una campaña
-
-1. Añadir el valor al Enum `Campaign` en `src/freshmart/campaigns/config.py` (el valor es el
-   de la columna `campana`/`promocion` del CSV).
-2. Añadir su `CampaignConfig`: archivo, mapping de columnas al esquema común, cómo marca a los
-   anónimos (`anonimo_valor`), nombre de partición y periodo (`fecha_min`, `fecha_max`).
-3. Ejecutar `--campaign <nombre>` y revisar las 6 validaciones; si alguna falla, consultar el
-   dato antes de tocar la limpieza.
-4. Reconstruir gold con `--only-gold`, añadir el periodo a la card 2 y pasar `pytest`.
-
-Paso a paso, con ejemplo y qué hacer si falla una validación:
-[`docs/playbook_nueva_campana.md`](docs/playbook_nueva_campana.md).
-
-## Documentación
-
-- [`docs/data_dictionary.md`](docs/data_dictionary.md): tablas, columnas, definiciones de
-  métricas y qué se puede sumar.
-- [`docs/decisions/`](docs/decisions/): ADRs (granularidad gold, Parquet particionado, Enum de
-  campañas, fechas por máscara, cuarentena).
-- [`docs/incidents/DATA-162_postmortem.md`](docs/incidents/DATA-162_postmortem.md).
-- [`docs/preview_maria.md`](docs/preview_maria.md) y
-  [`docs/retrospectiva_semana1.md`](docs/retrospectiva_semana1.md).
-
-## Problemas conocidos
-
-- Los CSV de Marketing no tienen un formato estándar: cada campaña necesita su mapping.
-- Verano trae tres formatos de fecha; se parsean por máscara, nunca con `dayfirst=True`.
-- Las ventas anónimas no tienen `cliente_id`: cuentan en revenue, no en clientes.
-- El revenue neto no descuenta devoluciones (tardan hasta 14 días en registrarse).
-- 12 ventas de verano (311 € brutos) son de productos que no están en `productos.csv`: se
-  mantienen en gold sin nombre, pendiente de consultar con Marketing.
-
-## Roadmap
-
-El plan completo por pasos (raw, segmentación, silver, incidente DATA-162, gold, dashboard,
-bonus de calidad) y su estado están en [`PROGRESO.md`](PROGRESO.md).
+FreshMart es un escenario ficticio y los datos son material de práctica.
 
 ## Autor
 
-Proyecto personal desarrollado como parte de mi portfolio de Data Engineering y mi proceso de
-aprendizaje en arquitectura y procesamiento de datos.
+**Josué Hormiga Benítez**
 
-## License
-
-This project is proprietary and all rights are reserved.
-
-Viewing the repository for portfolio evaluation does not
-grant permission to reuse, modify, or distribute its contents.
-
-See [LICENSE](LICENSE) for details.
-
+- LinkedIn: [Josué Juan Hormiga Benítez](https://www.linkedin.com/in/josu%C3%A9-juan-hormiga-ben%C3%ADtez-098499334/)
+- GitHub: [@josuehormigabenitez22-cmd](https://github.com/josuehormigabenitez22-cmd)
+- Repositorio: [FreshMart-OSupermarket-Proyect](https://github.com/josuehormigabenitez22-cmd/FreshMart-OSupermarket-Proyect)
