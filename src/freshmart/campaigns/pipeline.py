@@ -23,6 +23,7 @@ import pandas as pd
 from freshmart.campaigns.clean import leer_campana, limpiar_campana
 from freshmart.campaigns.config import COL_CAMPANA, Campaign, get_config
 from freshmart.campaigns.validate import InformeValidacion, validar
+from freshmart.logging_config import configurar_logging
 
 logger = logging.getLogger(__name__)
 
@@ -118,9 +119,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    logging.basicConfig(
-        level=logging.INFO, format="%(levelname)s %(name)s: %(message)s"
-    )
+    configurar_logging()
 
     try:
         resultado = run_pipeline(args.campaign, args.input, args.silver_dir)

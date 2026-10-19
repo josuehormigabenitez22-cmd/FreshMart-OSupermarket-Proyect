@@ -1,6 +1,7 @@
 import argparse
 import json
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -13,7 +14,7 @@ def analizar_csv(
     columna_id: str | None = None,
     filas_muestra: int = 10,
     data_dir: Path = DATA_DIR,
-) -> dict:
+) -> dict[str, Any]:
     """Analiza un CSV y devuelve un informe serializable a JSON."""
     ruta = data_dir / nombre_archivo
     df = pd.read_csv(ruta)
@@ -63,7 +64,7 @@ def analizar_csv(
 def generar_informe(
     data_dir: Path = DATA_DIR,
     report_path: Path = REPORT_PATH,
-) -> dict:
+) -> dict[str, Any]:
     """Genera y guarda el informe de exploración de FreshMart."""
     informes = {
         "clientes": analizar_csv(
