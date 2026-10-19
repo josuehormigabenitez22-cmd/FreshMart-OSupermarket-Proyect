@@ -12,7 +12,6 @@ Al leer el directorio con pandas/pyarrow vuelve a aparecer como columna.
 """
 
 import logging
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,11 +20,21 @@ import pandas as pd
 from freshmart.campaigns.clean import leer_campana, limpiar_campana
 from freshmart.campaigns.config import COL_CAMPANA, Campaign, get_config
 from freshmart.campaigns.validate import InformeValidacion, validar
+from freshmart.lake.parquet import PARQUET_FILE, escribir_parquet_atomico
 
 logger = logging.getLogger(__name__)
 
 SILVER_TABLE = "campaign_ventas"
-PARQUET_FILE = "part-0.parquet"
+
+__all__ = [
+    "PARQUET_FILE",
+    "SILVER_TABLE",
+    "PipelineResult",
+    "PipelineValidationError",
+    "escribir_silver",
+    "partition_dir",
+    "run_pipeline",
+]
 
 
 class PipelineValidationError(Exception):
@@ -49,28 +58,10 @@ def partition_dir(silver_dir: Path, campaign: Campaign) -> Path:
 
 
 def escribir_silver(df: pd.DataFrame, silver_dir: Path, campaign: Campaign) -> Path:
-    """Escribe la partición de la campaña en Parquet, reemplazándola entera.
-
-    Se escribe primero en un directorio temporal oculto (que pyarrow ignora) y
-    se renombra al final, para no dejar nunca una partición a medias.
-    """
-    destino = partition_dir(silver_dir, campaign)
-    temporal = destino.with_name(f".{destino.name}.tmp")
-
-    shutil.rmtree(temporal, ignore_errors=True)
-    temporal.mkdir(parents=True)
-    try:
-        df.drop(columns=[COL_CAMPANA]).to_parquet(
-            temporal / PARQUET_FILE, engine="pyarrow", index=False
-        )
-        if destino.exists():
-            shutil.rmtree(destino)
-        temporal.replace(destino)
-    except Exception:
-        shutil.rmtree(temporal, ignore_errors=True)
-        raise
-
-    return destino
+    """Escribe la partición de la campaña en Parquet, reemplazándola entera."""
+    return escribir_parquet_atomico(
+        df.drop(columns=[COL_CAMPANA]), partition_dir(silver_dir, campaign)
+    )
 
 
 def run_pipeline(
