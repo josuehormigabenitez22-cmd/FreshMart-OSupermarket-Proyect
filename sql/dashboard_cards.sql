@@ -1,5 +1,5 @@
 -- ================================================================
--- Dashboard "Campañas 2024" (Metabase) — 4 cards para la demo con dirección
+-- Dashboard "Campañas 2024" (Metabase): 4 cards para la demo con dirección
 --
 -- Cada bloque "-- name: <card>" es una pregunta SQL independiente en Metabase.
 -- En local las ejecuta freshmart.dashboard.cards con DuckDB, que prepara:

@@ -1,4 +1,4 @@
-# ADR 002 — Silver y gold en Parquet particionado por campaña
+# ADR 002: Silver y gold en Parquet particionado por campaña
 
 - **Estado:** aceptada
 - **Fecha:** 2024-09-18

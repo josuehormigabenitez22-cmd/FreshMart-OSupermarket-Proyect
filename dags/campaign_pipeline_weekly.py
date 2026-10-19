@@ -1,4 +1,4 @@
-"""DAG campaign_pipeline_weekly — campañas de Marketing de CSV a dashboard cada lunes.
+"""DAG campaign_pipeline_weekly: campañas de Marketing de CSV a dashboard cada lunes.
 
 Lo pidió Laura en la demo: "¿podemos tener esto actualizado automáticamente cada lunes?".
 Hace a mano lo que hasta ahora se lanzaba con ``scripts/ejecutar_pipeline.py``:

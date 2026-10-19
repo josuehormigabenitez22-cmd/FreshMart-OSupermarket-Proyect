@@ -1,4 +1,4 @@
-"""Paso 8: resultado de validación unificado, validador de CSV, gaps y alertas a Slack."""
+"""Resultado de validación unificado, validador de CSV, gaps y alertas a Slack."""
 
 import json
 from datetime import date

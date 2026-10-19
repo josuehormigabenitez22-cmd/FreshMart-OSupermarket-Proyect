@@ -1,9 +1,8 @@
 """Resultado de validación único para todo el proyecto.
 
 Lo usan las validaciones del pipeline (``campaigns/validate.py``), las del catálogo y el
-validador de CSV de entrada (``quality/csv_validator.py``). El bonus del curso proponía
-otra clase ``ValidationResult`` con listas de errores y warnings; aquí ambas ideas son la
-misma: cada comprobación es un ``ResultadoValidacion`` con su severidad, y un informe las
+validador de CSV de entrada (``quality/csv_validator.py``). En vez de tener
+una clase con listas de errores y otra con warnings, cada comprobación es un ``ResultadoValidacion`` con su severidad, y un informe las
 agrupa.
 
 * ``ERROR``: si falla, el informe no es válido (no se escribe, no se procesa).

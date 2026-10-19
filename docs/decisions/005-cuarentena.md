@@ -1,4 +1,4 @@
-# ADR 005 — Cuarentena para las filas imposibles
+# ADR 005: Cuarentena para las filas imposibles
 
 - **Estado:** aceptada
 - **Fecha:** 2024-09-23 (semana 2: inventario y líneas de pedido)

@@ -1,4 +1,4 @@
-# Playbook — Añadir una campaña de Marketing al pipeline
+# Playbook: añadir una campaña de Marketing al pipeline
 
 **Para:** cualquier persona del equipo de datos · **Pedido por:** Víctor Molina (demo del viernes)
 **Tiempo estimado:** 1–2 h si el CSV no trae sorpresas.

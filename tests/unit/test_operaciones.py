@@ -1,4 +1,4 @@
-"""Paso 9: cuarentena, inventario, líneas de pedido y tareas de los DAGs."""
+"""Cuarentena, inventario, líneas de pedido y tareas de los DAGs."""
 
 from datetime import date
 from io import StringIO

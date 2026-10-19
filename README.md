@@ -120,8 +120,8 @@ Los DAGs no guardan credenciales: la conexión a PostgreSQL es una Connection de
 rutas son Variables. Toda la lógica está en `src/freshmart/` y se puede probar sin Airflow.
 
 Para entrar en detalle: [diccionario de datos](docs/data_dictionary.md),
-[decisiones técnicas](docs/decisions/), [cómo añadir una campaña](docs/playbook_nueva_campana.md)
-y [avance del proyecto](PROGRESO.md).
+[decisiones técnicas](docs/decisions/)
+y [cómo añadir una campaña](docs/playbook_nueva_campana.md).
 
 ## Licencia
 

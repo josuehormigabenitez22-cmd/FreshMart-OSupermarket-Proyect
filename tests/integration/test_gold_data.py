@@ -1,6 +1,6 @@
 """Capa gold con los CSV reales. Se salta si data/ no existe (.gitignore).
 
-Cifras de referencia verificadas (ver la tabla del final de PROGRESO.md).
+Las cifras esperadas se comprobaron a mano contra los CSV originales.
 """
 
 from pathlib import Path
