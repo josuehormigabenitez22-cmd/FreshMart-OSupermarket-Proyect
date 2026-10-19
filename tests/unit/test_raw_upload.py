@@ -1,7 +1,10 @@
 import hashlib
 import json
+import logging
 from datetime import date
 from pathlib import Path
+
+import pytest
 
 from freshmart.lake.raw_upload import upload_raw
 
@@ -61,3 +64,43 @@ def test_upload_raw_is_idempotent(tmp_path: Path) -> None:
     hash_esperado = hashlib.sha256(contenido_destino_1).hexdigest()
     assert registro["sha256"] == hash_esperado
     assert registro["ingestion_date"] == fecha.isoformat()
+
+
+def _subir(tmp_path: Path, contenido: str) -> tuple[Path, Path]:
+    data_dir, raw_dir = tmp_path / "data", tmp_path / "raw"
+    data_dir.mkdir(exist_ok=True)
+    (data_dir / "clientes.csv").write_text(contenido, encoding="utf-8")
+    upload_raw(data_dir=data_dir, raw_dir=raw_dir, ingestion_date=date(2024, 9, 16))
+    return data_dir, raw_dir
+
+
+def test_upload_raw_avisa_si_el_origen_cambio(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    _subir(tmp_path, "id\n1\n")
+    with caplog.at_level(logging.INFO, logger="freshmart.lake.raw_upload"):
+        _subir(tmp_path, "id\n2\n")
+    assert "clientes.csv ha cambiado" in caplog.text
+    assert "--date" in caplog.text
+
+
+def test_upload_raw_sin_cambios_no_avisa(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    _subir(tmp_path, "id\n1\n")
+    with caplog.at_level(logging.WARNING, logger="freshmart.lake.raw_upload"):
+        _subir(tmp_path, "id\n1\n")
+    assert "ha cambiado" not in caplog.text
+
+
+def test_upload_raw_descarta_registros_con_ruta_absoluta(tmp_path: Path) -> None:
+    _, raw_dir = _subir(tmp_path, "id\n1\n")
+    manifest_path = raw_dir / "_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    antiguo = dict(manifest[0], path="C:\\Users\\x\\raw\\marketing\\clientes.csv")
+    manifest_path.write_text(json.dumps([antiguo, *manifest]), encoding="utf-8")
+
+    _subir(tmp_path, "id\n1\n")
+
+    rutas = [r["path"] for r in json.loads(manifest_path.read_text(encoding="utf-8"))]
+    assert rutas == ["marketing/clientes/2024/09/16/clientes.csv"]
