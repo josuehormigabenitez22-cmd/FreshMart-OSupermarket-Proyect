@@ -1,12 +1,24 @@
+"""Ingesta inmutable de los CSV a la zona raw del lake, con manifest.
+
+Reglas: el original se copia sin tocar, un archivo ya subido no se sobrescribe nunca
+y ``_manifest.json`` registra ruta relativa, fecha de ingesta y sha256 de cada archivo.
+Ejecutarlo dos veces no cambia ni un byte.
+"""
+
 import argparse
 import hashlib
 import json
+import logging
 import shutil
 from datetime import date
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
+from typing import Any
 
 from freshmart.lake.paths import raw_table_path
+from freshmart.logging_config import configurar_logging
 from freshmart.settings import DATA_DIR, RAW_DIR
+
+logger = logging.getLogger(__name__)
 
 SOURCE = "marketing"
 
@@ -39,6 +51,33 @@ def sha256_file(path: Path) -> str:
     return sha256.hexdigest()
 
 
+def _es_ruta_absoluta(ruta: str) -> bool:
+    # Las primeras versiones guardaban rutas absolutas de Windows (C:\...): se
+    # detectan también cuando se ejecuta en Linux/macOS.
+    return Path(ruta).is_absolute() or PureWindowsPath(ruta).is_absolute()
+
+
+def cargar_manifest(manifest_path: Path) -> dict[str, dict[str, Any]]:
+    """Registros del manifest indexados por ruta relativa a raw.
+
+    Descarta los registros antiguos con ruta absoluta: dependen de la máquina en la que
+    se generaron y duplicaban a los relativos.
+    """
+    if not manifest_path.exists():
+        return {}
+
+    with manifest_path.open(encoding="utf-8") as archivo:
+        manifest: list[dict[str, Any]] = json.load(archivo)
+
+    registros = {r["path"]: r for r in manifest if not _es_ruta_absoluta(r["path"])}
+    descartados = len(manifest) - len(registros)
+    if descartados:
+        logger.warning(
+            "Manifest: %d registros antiguos con ruta absoluta descartados", descartados
+        )
+    return registros
+
+
 def upload_raw(
     data_dir: Path = DATA_DIR,
     raw_dir: Path = RAW_DIR,
@@ -47,21 +86,13 @@ def upload_raw(
     """Copia archivos a raw sin sobrescribir los originales."""
     manifest_path = raw_dir / "_manifest.json"
     raw_dir.mkdir(parents=True, exist_ok=True)
-
-    if manifest_path.exists():
-        with manifest_path.open(encoding="utf-8") as archivo:
-            manifest = json.load(archivo)
-    else:
-        manifest = []
-
-    # Indexamos los registros existentes por ruta.
-    registros = {registro["path"]: registro for registro in manifest}
+    registros = cargar_manifest(manifest_path)
 
     for nombre in FILES:
         origen = data_dir / nombre
 
         if not origen.is_file():
-            print(f"Archivo no encontrado: {origen}")
+            logger.warning("Archivo no encontrado, se omite: %s", origen)
             continue
 
         tabla = Path(nombre).stem
@@ -76,10 +107,19 @@ def upload_raw(
 
         # Solo copiamos si el original todavía no existe.
         if destino.exists():
-            print(f"Ya existe, no se sobrescribe: {destino}")
+            sha_destino = sha256_file(destino)
+            if sha256_file(origen) != sha_destino:
+                logger.warning(
+                    "%s ha cambiado respecto a lo subido en raw y NO se sobrescribe. "
+                    "Si es una versión nueva, súbela con otra fecha de ingesta (--date).",
+                    nombre,
+                )
+            else:
+                logger.info("Ya existe, no se sobrescribe: %s", destino)
         else:
             shutil.copy2(origen, destino)
-            print(f"Copiado: {nombre}")
+            sha_destino = sha256_file(destino)
+            logger.info("Copiado: %s", nombre)
 
         ruta_relativa = destino.relative_to(raw_dir).as_posix()
         registro_anterior = registros.get(ruta_relativa)
@@ -94,7 +134,7 @@ def upload_raw(
                 if registro_anterior
                 else ingestion_date.isoformat()
             ),
-            "sha256": sha256_file(destino),
+            "sha256": sha_destino,
         }
 
     nuevo_manifest = (
@@ -115,8 +155,9 @@ def upload_raw(
             nuevo_manifest,
             encoding="utf-8",
         )
-
-    print(f"Manifest actualizado: {manifest_path}")
+        logger.info("Manifest actualizado: %s", manifest_path)
+    else:
+        logger.info("Manifest sin cambios: %s", manifest_path)
 
 
 def main() -> None:
@@ -141,6 +182,7 @@ def main() -> None:
         help="Fecha de ingesta en formato AAAA-MM-DD.",
     )
     args = parser.parse_args()
+    configurar_logging()
 
     upload_raw(
         data_dir=args.input,
