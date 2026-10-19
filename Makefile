@@ -36,4 +36,5 @@ segment:
 	$(PYTHON) scripts/segmentar.py --input $(DATA) --verify
 
 pipeline:
-	$(PYTHON) scripts/ejecutar_pipeline.py --all --input $(DATA) --silver-dir $(LAKE)/silver
+	$(PYTHON) scripts/ejecutar_pipeline.py --catalog --input $(DATA) --silver-dir $(LAKE)/silver
+	$(PYTHON) scripts/ejecutar_pipeline.py --all --input $(DATA) --silver-dir $(LAKE)/silver --gold-dir $(LAKE)/gold

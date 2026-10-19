@@ -38,9 +38,25 @@ PRIMAVERA_OK = (
 )
 
 
+PRODUCTOS = (
+    "producto_id,nombre,marca,categoria_id,precio_base,peso_kg,es_perecedero,"
+    "dias_caducidad,activo,fecha_alta\n"
+    "2229,Helado,Frigo,7.0,9.89,1.0,sí,30.0,True,2022-01-01\n"
+    "2039,Agua,Font Vella,8.0,0.50,1.5,no,,True,2021-01-01\n"
+)
+CATEGORIAS = "categoria_id,nombre,padre_id,nivel\n7,Helados,,1\n8,Agua,,1\n"
+
+
 def _escribir(input_dir: Path, nombre: str, contenido: str) -> None:
     input_dir.mkdir(exist_ok=True)
     (input_dir / nombre).write_text(contenido, encoding="utf-8")
+
+
+def _entrada_completa(entrada: Path) -> None:
+    _escribir(entrada, "campana_verano_ventas.csv", VERANO_OK)
+    _escribir(entrada, "campana_primavera_ventas.csv", PRIMAVERA_OK)
+    _escribir(entrada, "productos.csv", PRODUCTOS)
+    _escribir(entrada, "categorias.csv", CATEGORIAS)
 
 
 def test_e2e_verano_limpia_valida_y_escribe_parquet_particionado(
@@ -207,6 +223,66 @@ def test_e2e_cli_all_una_campana_fallida_no_bloquea_a_la_otra(
     assert "Campañas OK: 1/2" in capsys.readouterr().out
     assert not partition_dir(silver, Campaign.VERANO).exists()
     assert (partition_dir(silver, Campaign.PRIMAVERA) / PARQUET_FILE).is_file()
+
+
+def test_e2e_cli_catalogo_silver_y_gold(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    entrada, silver, gold = tmp_path / "in", tmp_path / "silver", tmp_path / "gold"
+    _entrada_completa(entrada)
+    rutas = ["--input", str(entrada), "--silver-dir", str(silver)]
+
+    assert main(["--catalog", *rutas]) == 0
+    assert main(["--all", *rutas, "--gold-dir", str(gold)]) == 0
+    assert "Gold: campaign_performance 5 filas" in capsys.readouterr().out
+
+    performance = pd.read_parquet(gold / "campaign_performance")
+    assert performance["num_transacciones"].sum() == 5  # 3 verano + 2 primavera
+    top = pd.read_parquet(gold / "campaign_top_products")
+    helado = top[top["producto_id"] == 2229].iloc[0]
+    assert (helado["producto_nombre"], helado["categoria"]) == ("Helado", "Helados")
+
+
+def test_e2e_cli_only_gold_reconstruye_sin_leer_csv(tmp_path: Path) -> None:
+    entrada, silver, gold = tmp_path / "in", tmp_path / "silver", tmp_path / "gold"
+    _entrada_completa(entrada)
+    rutas = ["--input", str(entrada), "--silver-dir", str(silver)]
+    assert main(["--catalog", *rutas]) == 0
+    assert main(["--all", *rutas]) == 0
+    assert not gold.exists()  # sin --gold-dir no se construye gold
+
+    for csv in entrada.iterdir():
+        csv.unlink()  # --only-gold solo debe leer silver
+    assert (
+        main(["--only-gold", "--silver-dir", str(silver), "--gold-dir", str(gold)]) == 0
+    )
+    assert len(pd.read_parquet(gold / "campaign_performance")) == 5
+
+
+def test_e2e_cli_gold_sin_catalogo_falla_con_mensaje(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    entrada, silver, gold = tmp_path / "in", tmp_path / "silver", tmp_path / "gold"
+    _entrada_completa(entrada)
+    rutas = ["--input", str(entrada), "--silver-dir", str(silver)]
+
+    assert main(["--all", *rutas, "--gold-dir", str(gold)]) == 1
+    assert "--catalog" in capsys.readouterr().out
+    assert not gold.exists()
+
+
+def test_e2e_cli_campana_fallida_no_reconstruye_gold(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    entrada, silver, gold = tmp_path / "in", tmp_path / "silver", tmp_path / "gold"
+    _entrada_completa(entrada)
+    _escribir(entrada, "campana_verano_ventas.csv", VERANO_FECHA_VACIA)
+    rutas = ["--input", str(entrada), "--silver-dir", str(silver)]
+    assert main(["--catalog", *rutas]) == 0
+
+    assert main(["--all", *rutas, "--gold-dir", str(gold)]) == 1
+    assert "Gold NO reconstruido" in capsys.readouterr().out
+    assert not gold.exists()
 
 
 def test_cli_exige_paths_por_argumentos(tmp_path: Path) -> None:
