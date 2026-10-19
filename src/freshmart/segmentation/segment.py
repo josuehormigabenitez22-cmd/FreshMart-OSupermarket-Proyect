@@ -100,7 +100,7 @@ def segmentar_pandas(
     data_dir: Path = DATA_DIR,
     fecha_corte: date = FECHA_CORTE,
 ) -> pd.DataFrame:
-    # Trampa 3: codigo_postal como str (y todo lo demás también, parseamos a mano).
+    # Todo como str: codigo_postal pierde los ceros a la izquierda si se lee como número.
     campana = pd.read_csv(data_dir / CAMPANA_CSV, dtype=str)
     clientes = pd.read_csv(data_dir / "clientes.csv", dtype=str)
     pedidos = pd.read_csv(data_dir / "pedidos.csv", dtype=str)
@@ -118,7 +118,7 @@ def segmentar_pandas(
 
     conteo = contar_pedidos_3m(pedidos, fecha_corte)
 
-    # Trampa 1: los dos joins son LEFT para no perder a los clientes de la campaña
+    # Los dos joins son LEFT para no perder a los clientes de la campaña
     # sin ficha en la maestra ni a los que no tienen pedidos.
     df = base.merge(unicos, on="cliente_id", how="left").merge(
         conteo, left_on="cliente_id", right_index=True, how="left"

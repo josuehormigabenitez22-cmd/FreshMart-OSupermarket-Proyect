@@ -43,7 +43,6 @@ COLUMNAS_CANONICAS: tuple[str, ...] = (
 )
 
 # Columna derivada: la crea la limpieza, no viene en el CSV.
-# COL_CLIENTE_ANONIMO: Final = "es_anonimo"
 COL_CLIENTE_ANONIMO: Final = "cliente_anonimo"
 
 # Esquema final del silver: columnas canónicas + derivadas.

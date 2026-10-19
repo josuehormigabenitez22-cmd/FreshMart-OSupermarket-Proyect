@@ -37,7 +37,7 @@ FILES: dict[str, str] = {
     # Catálogo (lo necesita la capa gold)
     "productos.csv": SOURCE,
     "categorias.csv": SOURCE,
-    # Operaciones (semana 2)
+    # Operaciones
     "inventario_diario.csv": "inventory",
     "lineas_pedido.csv": "orders",
 }

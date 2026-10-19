@@ -1,4 +1,4 @@
-# Diccionario de datos — lake de campañas
+# Diccionario de datos del lake de campañas
 
 Tablas del lake local (`freshmart-lake/`). En producción el mismo layout vive en
 `s3://freshmart-lake/`. Las cifras de filas son las de los datos del caso (septiembre 2024).

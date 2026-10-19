@@ -1,4 +1,4 @@
-# ADR 004 — Fechas parseadas por máscara, nunca con `format="mixed", dayfirst=True`
+# ADR 004: Fechas parseadas por máscara, nunca con `format="mixed", dayfirst=True`
 
 - **Estado:** aceptada
 - **Fecha:** 2024-09-17

@@ -2,8 +2,8 @@
 
 Dos tablas (ver docs/decisions/001-granularidad-gold.md):
 
-* ``campaign_performance`` — una fila por campaña y día (166 con verano + primavera).
-* ``campaign_top_products`` — una fila por campaña y producto, top N por revenue neto.
+* ``campaign_performance``: una fila por campaña y día (166 con verano + primavera).
+* ``campaign_top_products``: una fila por campaña y producto, top N por revenue neto.
 
 Definiciones (las mismas que se le explican a negocio):
 

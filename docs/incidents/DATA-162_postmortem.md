@@ -1,4 +1,4 @@
-# Postmortem DATA-162 — `raw_orders_daily` sin datos durante ~33 h
+# Postmortem DATA-162: `raw_orders_daily` sin datos durante ~33 h
 
 | | |
 |---|---|
@@ -78,7 +78,7 @@ Factores que lo empeoraron:
 - **Reintentos inútiles**: un error de autenticación no es transitorio. Los 3 reintentos solo
   retrasaron 10 minutos el fallo definitivo.
 - **Sin control de frescura**: nada avisa de que una partición de raw o de gold no tiene datos
-  (ver Paso 8, detección de gaps).
+  (lo cubre la detección de gaps de `quality/gap_detection.py`).
 - **Deuda conocida**: el dueño del DAG sabía que las credenciales estaban en el código y lo
   tenía en su lista de pendientes.
 
@@ -137,7 +137,7 @@ Pasos de despliegue (fuera de este repo, sin acceso a AWS ni Airflow reales):
 | Revisar los otros 11 DAGs en busca de credenciales; llevarlos a `dags/` para que la guarda de `test_dags.py` los cubra (no hay CI todavía: corre con `pytest` y pre-commit) | Equipo de datos | Pendiente |
 | Suscribir al equipo de datos a los avisos de Infra (canal o lista de email) | Elena | Pendiente |
 | Responsable rotativo de `#data-alerts` cada mañana | Elena | Pendiente |
-| Detección de gaps de datos con alerta a Slack (Paso 8) | Josué | Pendiente |
+| Detección de gaps de datos con alerta a Slack | Josué | Hecho |
 
 ## Comunicación
 

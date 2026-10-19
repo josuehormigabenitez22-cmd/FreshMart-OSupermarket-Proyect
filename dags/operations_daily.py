@@ -1,4 +1,4 @@
-"""DAG operations_daily — inventario y líneas de pedido de raw a silver/gold cada día.
+"""DAG operations_daily: inventario y líneas de pedido de raw a silver/gold cada día.
 
 Une el inventario al mismo esquema que las campañas: misma limpieza, mismas
 validaciones (``freshmart.quality``), mismo Parquet atómico y la misma cuarentena para

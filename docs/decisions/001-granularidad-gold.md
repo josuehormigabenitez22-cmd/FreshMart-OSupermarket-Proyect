@@ -1,4 +1,4 @@
-# ADR 001 — Granularidad de la capa gold de campañas
+# ADR 001: Granularidad de la capa gold de campañas
 
 - **Estado:** aceptada
 - **Fecha:** 2024-09-19

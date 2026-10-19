@@ -1,4 +1,4 @@
-"""DAG raw_orders_daily — pedidos del día anterior de PostgreSQL (RDS) a raw en S3.
+"""DAG raw_orders_daily: pedidos del día anterior de PostgreSQL (RDS) a raw en S3.
 
 Versión definitiva tras el incidente DATA-162 (ver
 docs/incidents/DATA-162_postmortem.md). Ninguna credencial vive en este repo.

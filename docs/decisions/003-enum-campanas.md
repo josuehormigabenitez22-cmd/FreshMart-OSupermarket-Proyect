@@ -1,4 +1,4 @@
-# ADR 003 — Campañas como Enum con su configuración declarada
+# ADR 003: Campañas como Enum con su configuración declarada
 
 - **Estado:** aceptada
 - **Fecha:** 2024-09-18 (comentario 4 del code review de Elena)
