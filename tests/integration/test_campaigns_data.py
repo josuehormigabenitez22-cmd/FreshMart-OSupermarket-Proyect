@@ -1,10 +1,13 @@
 """Limpieza sobre los CSV reales. Se salta si data/ no existe (.gitignore)."""
 
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
 from freshmart.campaigns.clean import leer_campana, limpiar_campana
 from freshmart.campaigns.config import Campaign, get_config
+from freshmart.campaigns.pipeline import run_pipeline
 from freshmart.settings import DATA_DIR
 
 pytestmark = pytest.mark.skipif(
@@ -29,3 +32,11 @@ def test_primavera_real() -> None:
     assert df["fecha_compra"].dt.month.between(3, 5).all()
     assert df["cliente_anonimo"].sum() == 78
     assert (df["cliente_id"].dropna() > 0).all()  # no queda ningún -1
+
+
+def test_pipeline_verano_real_42733_filas_y_5_de_5(tmp_path: Path) -> None:
+    resultado = run_pipeline(Campaign.VERANO, DATA_DIR, tmp_path / "silver")
+
+    assert resultado.filas == 42_733
+    assert (resultado.informe.aprobadas, resultado.informe.total) == (5, 5)
+    assert len(pd.read_parquet(tmp_path / "silver" / "campaign_ventas")) == 42_733

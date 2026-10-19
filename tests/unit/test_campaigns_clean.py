@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from freshmart.campaigns.clean import (
+    eliminar_cantidades_no_positivas,
     eliminar_duplicados,
     limpiar_campana,
     marcar_anonimos,
@@ -25,6 +26,11 @@ from freshmart.campaigns.config import (
 def test_config_anonimo_valor_por_campana() -> None:
     assert get_config(Campaign.VERANO).anonimo_valor is None
     assert get_config(Campaign.PRIMAVERA).anonimo_valor == -1
+
+
+def test_config_particion_por_campana() -> None:
+    assert get_config(Campaign.VERANO).particion == "verano"
+    assert get_config(Campaign.PRIMAVERA).particion == "primavera"
 
 
 def test_config_todos_los_mappings_cubren_el_esquema_canonico() -> None:
@@ -71,6 +77,27 @@ def test_eliminar_duplicados_conserva_filas_que_difieren_en_una_columna() -> Non
     df = pd.DataFrame({"id": ["1", "1"], "v": ["a", "b"]})
     assert len(eliminar_duplicados(df)) == 2
     assert len(eliminar_duplicados(df.iloc[0:0])) == 0  # vacío
+
+
+# --- eliminar_cantidades_no_positivas ---------------------------------------
+
+
+def test_eliminar_cantidades_no_positivas_caso_feliz(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    df = pd.DataFrame({"cantidad": pd.array([1, 0, 3], dtype="Int64"), "id": [1, 2, 3]})
+    with caplog.at_level(logging.WARNING):
+        resultado = eliminar_cantidades_no_positivas(df)
+    assert resultado["id"].tolist() == [1, 3]
+    assert "1" in caplog.text
+
+
+def test_eliminar_cantidades_no_positivas_negativos_si_nulos_no() -> None:
+    df = pd.DataFrame(
+        {"cantidad": pd.array([-2, None, 1], dtype="Int64"), "id": [1, 2, 3]}
+    )
+    # El negativo se descarta; el nulo se conserva para que lo reporte la validación.
+    assert eliminar_cantidades_no_positivas(df)["id"].tolist() == [2, 3]
 
 
 # --- parsear_fechas ----------------------------------------------------------
@@ -164,19 +191,19 @@ def test_marcar_anonimos_none_no_toca_nada_y_respeta_los_nulos() -> None:
 def test_limpiar_campana_verano() -> None:
     raw = pd.DataFrame(
         {
-            "venta_id": ["1", "1", "2"],
-            "cliente_id": ["105049.0", "105049.0", None],
-            "producto_id": ["2229", "2229", "2312"],
-            "fecha_compra": ["14/07/2024", "14/07/2024", "Jun 30, 2024"],
-            "cantidad": ["1", "1", "2"],
-            "precio": ["9,89€", "9,89€", "0,8€"],
-            "descuento_pct": ["20.0", "20.0", "0.0"],
-            "tienda_id": ["2", "2", "3"],
-            "campana": ["verano_2024"] * 3,
+            "venta_id": ["1", "1", "2", "3"],
+            "cliente_id": ["105049.0", "105049.0", None, "101591.0"],
+            "producto_id": ["2229", "2229", "2312", "2167"],
+            "fecha_compra": ["14/07/2024", "14/07/2024", "Jun 30, 2024", "2024-08-05"],
+            "cantidad": ["1", "1", "2", "0"],
+            "precio": ["9,89€", "9,89€", "0,8€", "4,27€"],
+            "descuento_pct": ["20.0", "20.0", "0.0", "0.0"],
+            "tienda_id": ["2", "2", "3", "2"],
+            "campana": ["verano_2024"] * 4,
         }
     )
     df = limpiar_campana(raw, Campaign.VERANO)
-    assert len(df) == 2  # duplicado fuera
+    assert len(df) == 2  # duplicado y cantidad 0 fuera
     assert df["cliente_anonimo"].tolist() == [False, True]
     assert df["precio"].tolist() == [9.89, 0.8]
     assert str(df["cliente_id"].dtype) == "Int64"
