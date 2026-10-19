@@ -89,6 +89,7 @@ Con el entorno activado, desde la raíz del repo:
 | Catálogo (productos y categorías) a silver | `python scripts/ejecutar_pipeline.py --catalog --input data --silver-dir freshmart-lake/silver` |
 | Campañas a silver y después gold | `python scripts/ejecutar_pipeline.py --all --input data --silver-dir freshmart-lake/silver --gold-dir freshmart-lake/gold` |
 | Solo gold (con silver ya construido) | `python scripts/ejecutar_pipeline.py --only-gold --silver-dir freshmart-lake/silver --gold-dir freshmart-lake/gold` |
+| Las 4 cards del dashboard | `python scripts/dashboard.py --gold-dir freshmart-lake/gold --input data` |
 
 Orden la primera vez: `--catalog` y luego `--all` con `--gold-dir` (gold necesita el catálogo).
 
@@ -133,7 +134,20 @@ sobre `src/`.
    anónimos (`anonimo_valor`), nombre de partición y periodo (`fecha_min`, `fecha_max`).
 3. Ejecutar `--campaign <nombre>` y revisar las 6 validaciones; si alguna falla, consultar el
    dato antes de tocar la limpieza.
-4. Reconstruir gold con `--only-gold` y pasar `pytest`.
+4. Reconstruir gold con `--only-gold`, añadir el periodo a la card 2 y pasar `pytest`.
+
+Paso a paso, con ejemplo y qué hacer si falla una validación:
+[`docs/playbook_nueva_campana.md`](docs/playbook_nueva_campana.md).
+
+## Documentación
+
+- [`docs/data_dictionary.md`](docs/data_dictionary.md): tablas, columnas, definiciones de
+  métricas y qué se puede sumar.
+- [`docs/decisions/`](docs/decisions/): ADRs (granularidad gold, Parquet particionado, Enum de
+  campañas, fechas por máscara).
+- [`docs/incidents/DATA-162_postmortem.md`](docs/incidents/DATA-162_postmortem.md).
+- [`docs/preview_maria.md`](docs/preview_maria.md) y
+  [`docs/retrospectiva_semana1.md`](docs/retrospectiva_semana1.md).
 
 ## Problemas conocidos
 
