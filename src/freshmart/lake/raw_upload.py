@@ -20,6 +20,9 @@ FILES = [
     # Datos generales
     "clientes.csv",
     "pedidos.csv",
+    # Catálogo (lo necesita la capa gold)
+    "productos.csv",
+    "categorias.csv",
 ]
 
 MANIFEST_PATH = RAW_DIR / "_manifest.json"
