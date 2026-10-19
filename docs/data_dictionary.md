@@ -10,8 +10,13 @@ Tablas del lake local (`freshmart-lake/`). En producción el mismo layout vive e
 | silver | `campaign_ventas` | una venta | 73.937 | `campaigns/pipeline.py` |
 | silver | `productos` | un producto | 1.847 | `catalog/silver.py` |
 | silver | `categorias` | una categoría | 89 | `catalog/silver.py` |
+| raw | `raw/inventory/inventario_diario/…`, `raw/orders/lineas_pedido/…` | archivo original | — | `lake/raw_upload.py` |
+| silver | `inventario_diario` | producto + tienda + día | 17.525 | `inventory/silver.py` |
+| silver | `lineas_pedido` | una línea de pedido | 142.204 | `orders/lineas.py` |
+| silver | `_cuarentena/<tabla>` | fila apartada + motivo | 34 / 172 | `quality/cuarentena.py` |
 | gold | `campaign_performance` | campaña + día | 166 | `campaigns/gold.py` |
 | gold | `campaign_top_products` | campaña + producto (top 50) | 100 | `campaigns/gold.py` |
+| gold | `inventario_tienda_dia` | tienda + día | 10 | `inventory/gold.py` |
 
 Convenciones:
 
@@ -113,6 +118,68 @@ card 3 (top 10).
 | `unidades_vendidas` | int64 | Σ cantidad |
 | `compradores_unicos` | int64 | Clientes distintos que lo compraron, sin anónimos |
 | `num_transacciones` | int64 | Ventas del producto |
+
+---
+
+## silver.inventario_diario
+
+Foto diaria del stock por producto y tienda. Particionada por día (`fecha=AAAA-MM-DD/`). Origen:
+`inventario_diario.csv`. Se eliminan 911 duplicados exactos (el mismo batch dos veces) y van a
+cuarentena las filas imposibles (34 con stock negativo). Clave única: producto + tienda + fecha.
+Que un producto no aparezca en una tienda **no** es un error: es el surtido de esa tienda.
+
+| Columna | Tipo | Descripción |
+|---|---|---|
+| `producto_id`, `tienda_id` | int64 | Producto (existe en `productos`) y tienda (1–5) |
+| `stock_actual` | int64 | Unidades en stock al cierre del día; ≥ 0 |
+| `stock_minimo` | int64 | Punto de pedido |
+| `stock_seguridad` | int64 | Colchón mínimo; ≤ `stock_minimo` |
+| `unidades_vendidas`, `unidades_recibidas` | int64 | Movimientos del día |
+| `sin_stock` | bool | `stock_actual = 0` |
+| `bajo_seguridad` | bool | `stock_actual < stock_seguridad`: riesgo de rotura |
+| `bajo_minimo` | bool | `stock_actual < stock_minimo`: toca reponer |
+| `fecha` | string | Partición (día de la foto) |
+
+> El stock de un día **no** cuadra con el del anterior menos lo vendido más lo recibido (solo
+> 31 de 8.772 pares). No se valida hasta aclarar con Operaciones cómo se toma la foto.
+
+## silver.lineas_pedido
+
+Una fila por línea de pedido. Origen: `lineas_pedido.csv`. 172 líneas en cuarentena
+(precio negativo, cantidad 0 o total que no cuadra).
+
+| Columna | Tipo | Descripción |
+|---|---|---|
+| `linea_id` | int64 | Id único de la línea |
+| `pedido_id` | int64 | Pedido (todos existen en `pedidos.csv`) |
+| `producto_id` | int64 | Producto; 47 líneas son de productos que no están en el catálogo |
+| `cantidad` | int64 | Unidades, ≥ 1 |
+| `precio_unitario` | double | € por unidad, ≥ 0. 375 líneas a 0 €: pendiente de confirmar si son regalos o promociones |
+| `descuento_pct` | double | 0–100 |
+| `total_linea` | double | cantidad × precio × (1 − descuento/100), redondeado a céntimos (validado ±0,01 €) |
+
+> La suma de `total_linea` **no** cuadra con `pedidos.total_neto` en 48.480 de 48.520 pedidos.
+> No se construye nada encima hasta saber cuál es la fuente buena.
+
+## silver._cuarentena/&lt;tabla&gt;
+
+Filas apartadas por imposibles, con las mismas columnas que la tabla de origen más
+`motivo_cuarentena` (reglas separadas por `;`, p. ej. `cantidad_no_positiva;total_inconsistente`).
+Se reescribe en cada carga. Es una lista de preguntas para negocio, no una papelera
+(ver [ADR 005](decisions/005-cuarentena.md)).
+
+## gold.inventario_tienda_dia
+
+Salud del stock por **tienda y día** para Operaciones.
+
+| Columna | Tipo | Definición |
+|---|---|---|
+| `tienda_id`, `fecha` | int64, timestamp | Tienda y día |
+| `productos` | int64 | Productos con foto de stock ese día |
+| `sin_stock`, `bajo_seguridad`, `bajo_minimo` | int64 | Productos en cada situación |
+| `stock_total` | int64 | Σ unidades en stock |
+| `unidades_vendidas`, `unidades_recibidas` | int64 | Σ movimientos del día |
+| `pct_bajo_seguridad` | double | bajo_seguridad / productos (3,7 %–4,9 % en los datos del caso) |
 
 ---
 

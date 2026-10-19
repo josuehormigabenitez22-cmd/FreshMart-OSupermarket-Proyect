@@ -47,8 +47,10 @@ FreshMart-OSupermarket-Proyect/
 │   ├── catalog/                 # Silver de productos y categorías
 │   ├── campaigns/               # config, clean, validate, pipeline (→ silver), gold, cli
 │   ├── dashboard/               # Las 4 cards de Metabase ejecutadas con DuckDB
-│   ├── quality/                 # Validador de CSV, detección de gaps y alertas a Slack
-│   └── orders/                  # Extracción diaria de pedidos (la usa el DAG)
+│   ├── quality/                 # Validador de CSV, cuarentena, gaps y alertas a Slack
+│   ├── inventory/               # Inventario diario: silver (con cuarentena) y gold por tienda
+│   ├── orders/                  # Extracción diaria de pedidos y líneas de pedido a silver
+│   └── orchestration/           # Tareas que ejecutan los DAGs (sin depender de Airflow)
 ├── dags/                        # DAGs de Airflow (sin credenciales)
 ├── sql/                         # Consultas SQL (DuckDB)
 ├── scripts/                     # Puntos de entrada de línea de comandos
@@ -94,6 +96,8 @@ Con el entorno activado, desde la raíz del repo:
 | Las 4 cards del dashboard | `python scripts/dashboard.py --gold-dir freshmart-lake/gold --input data` |
 | Validar un CSV antes de subirlo | `python scripts/validar_csv.py data/campana_verano_ventas.csv --campaign verano` |
 | Detectar días sin datos en gold | `python -m freshmart.quality.gap_detection --gold-dir freshmart-lake/gold --campaign verano` |
+| Inventario a silver y gold | `python -m freshmart.inventory.cli --input data --silver-dir freshmart-lake/silver --gold-dir freshmart-lake/gold` |
+| Líneas de pedido a silver | `python -m freshmart.orders.lineas --input data --silver-dir freshmart-lake/silver` |
 
 Orden la primera vez: `--catalog` y luego `--all` con `--gold-dir` (gold necesita el catálogo).
 
@@ -117,6 +121,27 @@ validaciones cada una); gold con 166 filas en `campaign_performance` y revenue n
   se envía nada.
 
 Los dos usan el mismo resultado de validación (`freshmart.quality.result`) que el pipeline.
+
+### Inventario y líneas de pedido (operaciones)
+
+Siguen el mismo esquema que las campañas, con una diferencia: las **filas imposibles** (stock
+negativo, precio negativo, total de línea que no cuadra) no bloquean la tabla ni se borran. Van a
+`silver/_cuarentena/<tabla>/` con su motivo para revisarlas con negocio
+([ADR 005](docs/decisions/005-cuarentena.md)). Los problemas de tabla (vacía, clave repetida)
+siguen impidiendo escribir. Con los datos del caso: inventario 17.525 filas y 34 en cuarentena;
+líneas 142.204 filas y 172 en cuarentena.
+
+### DAGs de Airflow
+
+| DAG | Cuándo | Qué hace |
+|---|---|---|
+| `campaign_pipeline_weekly` | lunes 06:00 | Valida los CSV de campaña, construye silver (campañas y catálogo) y gold, y busca gaps con alerta a Slack |
+| `operations_daily` | cada día 05:00 | Catálogo, inventario (silver + gold por tienda) y líneas de pedido |
+| `raw_orders_daily` | cada día 03:00 | Pedidos del día anterior de PostgreSQL a raw (ver abajo) |
+
+Los dos primeros leen las rutas de las Variables de Airflow `freshmart_input_dir` y
+`freshmart_lake_dir`. Toda su lógica está en `freshmart.orchestration.tasks`, que no importa
+Airflow y se testea como el resto.
 
 ### DAG `raw_orders_daily` (Airflow)
 
@@ -160,7 +185,7 @@ Paso a paso, con ejemplo y qué hacer si falla una validación:
 - [`docs/data_dictionary.md`](docs/data_dictionary.md): tablas, columnas, definiciones de
   métricas y qué se puede sumar.
 - [`docs/decisions/`](docs/decisions/): ADRs (granularidad gold, Parquet particionado, Enum de
-  campañas, fechas por máscara).
+  campañas, fechas por máscara, cuarentena).
 - [`docs/incidents/DATA-162_postmortem.md`](docs/incidents/DATA-162_postmortem.md).
 - [`docs/preview_maria.md`](docs/preview_maria.md) y
   [`docs/retrospectiva_semana1.md`](docs/retrospectiva_semana1.md).

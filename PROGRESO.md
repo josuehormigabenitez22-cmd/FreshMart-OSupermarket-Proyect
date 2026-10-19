@@ -3,15 +3,16 @@
 > ✅ = hecho y verificado · ❌ = pendiente (o a medias: la línea dice qué falta).
 > Se actualiza en el mismo cambio que completa cada tarea.
 
-**Última actualización:** 2026-10-19 — Paso 8 (bonus) hecho en la rama
-`feat/bonus-calidad-monitoring`.
-Verificado: `pytest` 159 passed · `ruff` OK · `mypy --strict` OK · validador y gaps con datos
-reales.
+**Última actualización:** 2026-10-20 — Paso 9 (stretch) hecho en la rama
+`feat/inventario-lineas-y-dags`.
+Verificado: `pytest` 178 passed · `ruff` OK · `mypy --strict` OK · inventario y líneas con
+datos reales · DAGs compilan y pasan la guarda.
 
 ## Estado actual
 
-**Curso completo, bonus incluido (Pasos 0–8).** Solo queda el stretch (Paso 9, la semana
-siguiente del curso) y las preguntas abiertas a negocio de abajo.
+**Curso completo, con bonus y stretch (Pasos 0–9).** Solo quedan tareas que no se pueden
+hacer desde este repo (desplegar en Airflow real, el pipeline de Raúl, el flujo de Git del
+principio) y las preguntas abiertas a negocio de abajo.
 
 | Paso | Tema | Hecho |
 |---|---|---|
@@ -24,17 +25,16 @@ siguiente del curso) y las preguntas abiertas a negocio de abajo.
 | 6 | Día 4 tarde · capa gold | 11 / 11 |
 | 7 | Día 5 · dashboard y cierre | 6 / 6 |
 | 8 | Bonus · calidad y monitorización | 6 / 6 |
-| 9 | Stretch · semana siguiente | 0 / 4 |
+| 9 | Stretch · semana siguiente | 4 / 5 |
 
 ---
 
 ## Siguiente paso (en este orden)
 
-1. **PR del Paso 8** (`feat/bonus-calidad-monitoring`). Comprobar la pestaña Commits antes de
+1. **PR del Paso 9** (`feat/inventario-lineas-y-dags`). Comprobar la pestaña Commits antes de
    mergear.
-2. **Paso 9 (stretch)**: empezar por el DAG de Airflow que ejecute el pipeline de campañas
-   cada lunes (lo pidió Laura en la demo), reutilizando `campaigns/cli.py` y con la validación
-   de CSV y la detección de gaps como tareas.
+2. **Llevar las preguntas de abajo a negocio.** Sobre todo la conciliación de líneas y
+   pedidos: sin ella no se puede construir un gold de ventas fiable con `lineas_pedido`.
 
 ## Para preguntar a negocio
 
@@ -44,6 +44,12 @@ siguiente del curso) y las preguntas abiertas a negocio de abajo.
 - **Marketing**: el periodo de verano está configurado del 15/06 al 15/09, pero no hay ventas
   el 15/06, el 16/06 ni el 15/09. ¿La campaña empezó el 17/06 o faltan datos?
 - **Infra**: rotar otra vez `data_readonly` cuando se despliegue DATA-162.
+- **Finanzas / Operaciones**: la suma de las líneas de pedido no cuadra con `total_neto` de
+  `pedidos.csv` en 48.480 de 48.520 pedidos. ¿Cuál es la fuente buena?
+- **Operaciones**: el stock de un día no cuadra con el del anterior − vendido + recibido (solo
+  31 de 8.772 pares). ¿Cómo y cuándo se toma la foto de stock?
+- **Operaciones**: 34 fotos de stock negativas y 172 líneas en cuarentena
+  (`silver/_cuarentena/`); 375 líneas a 0 € (¿regalos?) y 47 de productos fuera de catálogo.
 
 ---
 
@@ -229,10 +235,19 @@ siguiente del curso) y las preguntas abiertas a negocio de abajo.
 
 ## Paso 9 · Stretch (semana siguiente)
 
-- ❌ DAG de Airflow que ejecute el pipeline de campañas (raw → silver → gold) cada lunes.
-- ❌ Fix definitivo de DATA-162 aplicado a todos los DAGs.
-- ❌ Ingesta y limpieza de `inventario_diario.csv` y `lineas_pedido.csv`.
-- ❌ Unificar con el pipeline de inventario de Raúl.
+- ✅ DAG `campaign_pipeline_weekly` (lunes 06:00): validar CSV → silver por campaña + catálogo
+  → gold → gaps con alerta a Slack. Gold solo si todo lo anterior va bien. Lógica en
+  `freshmart/orchestration/tasks.py`, testeada sin Airflow; rutas desde Variables de Airflow.
+- ✅ Fix de DATA-162 en todos los DAGs del repo: los 3 (`raw_orders_daily`,
+  `campaign_pipeline_weekly`, `operations_daily`) sin credenciales ni SQL formateado, vigilados
+  por `tests/unit/test_dags.py`. No desplegado: no hay Airflow real.
+- ✅ Ingesta y limpieza de `inventario_diario.csv` y `lineas_pedido.csv`: raw con su fuente
+  (`inventory/`, `orders/`), silver con cuarentena (ADR 005) y gold `inventario_tienda_dia`.
+  Datos reales: inventario 17.525 filas + 34 en cuarentena; líneas 142.204 + 172 en cuarentena.
+- ✅ Inventario dentro del mismo esquema que las campañas: misma limpieza, el mismo
+  `InformeCalidad`, Parquet atómico, CLI y DAG `operations_daily`.
+- ❌ Pair programming con Raúl para migrar su pipeline de inventario a este esquema: su código
+  no está en este repo.
 
 ---
 
