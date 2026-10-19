@@ -16,6 +16,7 @@ from freshmart.campaigns.gold import (
 )
 from freshmart.campaigns.pipeline import run_pipeline
 from freshmart.catalog.silver import run_catalogo
+from freshmart.dashboard.cards import ejecutar_cards
 from freshmart.settings import DATA_DIR
 
 NECESARIOS = [
@@ -77,6 +78,27 @@ def test_top_products_de_referencia(lake: tuple[Path, Path]) -> None:
 
 def test_gold_pandas_igual_a_sql(lake: tuple[Path, Path]) -> None:
     verificar_gold(lake[0])
+
+
+def test_dashboard_cards_con_datos_reales(lake: tuple[Path, Path]) -> None:
+    cards = ejecutar_cards(lake[1], DATA_DIR)
+
+    revenue = cards["card_1_revenue"].set_index("campana")
+    assert revenue["revenue_neto_total"].round().to_dict() == {
+        "verano": 996_555,
+        "primavera": 750_622,
+    }
+    # La card en SQL da lo mismo que la versión pandas del preview de María.
+    assert cards["card_2_clientes_nuevos"].set_index("campana")[
+        "clientes_nuevos"
+    ].to_dict() == {"verano": 4_769, "primavera": 3_479}
+    assert len(cards["card_3_top_10_productos"]) == 20
+    evolucion = cards["card_4_evolucion_diaria"]
+    assert len(evolucion) == 166
+    assert evolucion.groupby("campana")["dia_de_campana"].max().to_dict() == {
+        "primavera": 76,
+        "verano": 90,
+    }
 
 
 def test_clientes_nuevos_de_referencia() -> None:

@@ -1,4 +1,4 @@
-.PHONY: setup install lint format test test-unit check raw segment pipeline
+.PHONY: setup install lint format test test-unit check raw segment pipeline dashboard
 
 PYTHON ?= python
 DATA ?= data
@@ -38,3 +38,6 @@ segment:
 pipeline:
 	$(PYTHON) scripts/ejecutar_pipeline.py --catalog --input $(DATA) --silver-dir $(LAKE)/silver
 	$(PYTHON) scripts/ejecutar_pipeline.py --all --input $(DATA) --silver-dir $(LAKE)/silver --gold-dir $(LAKE)/gold
+
+dashboard:
+	$(PYTHON) scripts/dashboard.py --gold-dir $(LAKE)/gold --input $(DATA)
