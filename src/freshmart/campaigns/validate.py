@@ -1,16 +1,11 @@
-"""Validaciones de calidad sobre ventas de campaña ya limpias.
-
-Reglas de diseño (de la revisión de código):
-
-1. Lo primero que se comprueba es que el DataFrame no esté vacío.
-2. Ningún path en el código: este módulo trabaja solo con DataFrames.
-3. Las campañas se identifican con el Enum ``Campaign``, nunca con strings.
-4. Las fechas inválidas se convierten con ``errors="coerce"`` y se cuentan.
+"""
+Validaciones de calidad sobre ventas de campaña ya limpias.
 """
 
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import partial
 
 import pandas as pd
 
@@ -22,6 +17,7 @@ from freshmart.campaigns.config import (
     COL_VENTA_ID,
     COLUMNAS_LIMPIAS,
     Campaign,
+    get_config,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,6 +26,7 @@ NO_VACIO = "no_vacio"
 COLUMNAS_ESPERADAS = "columnas_esperadas"
 VENTA_ID_UNICO = "venta_id_unico"
 FECHAS_VALIDAS = "fechas_validas"
+FECHAS_EN_RANGO = "fechas_en_rango"
 VALORES_VALIDOS = "valores_validos"
 
 
@@ -69,7 +66,7 @@ class InformeValidacion:
 
 
 def _cumple(condicion: pd.Series) -> pd.Series:
-    """Booleano limpio: los nulos (NA/NaN) cuentan como que NO cumplen."""
+    """Booleano limpio: los nulos (NA/NaN) cuentan como que NO cumplen"""
     return condicion.fillna(False).astype(bool)
 
 
@@ -96,11 +93,30 @@ def validar_venta_id_unico(df: pd.DataFrame) -> ResultadoValidacion:
 
 
 def validar_fechas(df: pd.DataFrame) -> ResultadoValidacion:
-    # errors="coerce": lo que no sea una fecha válida pasa a NaT y se cuenta.
+    # lo que no sea una fecha válida pasa a NaT y se cuenta
     fechas = pd.to_datetime(df[COL_FECHA], errors="coerce")
     invalidas = int(fechas.isna().sum())
     return ResultadoValidacion(
         FECHAS_VALIDAS, invalidas == 0, f"{invalidas} fechas inválidas"
+    )
+
+
+# Añadimos una función de validez para verificar que las fechas están en rango
+def validar_fechas_en_rango(
+    df: pd.DataFrame, campaign: Campaign
+) -> ResultadoValidacion:
+    """
+    Las fechas deben caer dentro del periodo de la campaña.
+    Las fechas nulas o inválidas no cuentan aquí: ya las reporta la función de fechas_validas
+    """
+    config = get_config(campaign)
+    dias = pd.to_datetime(df[COL_FECHA], errors="coerce").dt.normalize()
+    inicio, fin = pd.Timestamp(config.fecha_min), pd.Timestamp(config.fecha_max)
+    fuera = int((dias.notna() & ~dias.between(inicio, fin)).sum())
+    return ResultadoValidacion(
+        FECHAS_EN_RANGO,
+        fuera == 0,
+        f"{fuera} fuera de [{config.fecha_min}, {config.fecha_max}]",
     )
 
 
@@ -116,24 +132,31 @@ def validar_valores(df: pd.DataFrame) -> ResultadoValidacion:
     return ResultadoValidacion(VALORES_VALIDOS, ok, detalle)
 
 
-# Orden de ejecución. Las dos primeras son bloqueantes: sin filas o sin columnas
-# el resto de comprobaciones no tiene sentido (o fallaría con un KeyError).
-_VALIDACIONES: tuple[tuple[str, Callable[[pd.DataFrame], ResultadoValidacion]], ...] = (
-    (NO_VACIO, validar_no_vacio),
-    (COLUMNAS_ESPERADAS, validar_columnas),
-    (VENTA_ID_UNICO, validar_venta_id_unico),
-    (FECHAS_VALIDAS, validar_fechas),
-    (VALORES_VALIDOS, validar_valores),
-)
 _BLOQUEANTES = frozenset({NO_VACIO, COLUMNAS_ESPERADAS})
 
 
+def _validaciones(
+    campaign: Campaign,
+) -> tuple[tuple[str, Callable[[pd.DataFrame], ResultadoValidacion]], ...]:
+    """
+    Orden de ejecución. Las dos primeras son bloqueantes: sin filas o sin columnas el resto de comprobaciones no tiene sentido
+    """
+    return (
+        (NO_VACIO, validar_no_vacio),
+        (COLUMNAS_ESPERADAS, validar_columnas),
+        (VENTA_ID_UNICO, validar_venta_id_unico),
+        (FECHAS_VALIDAS, validar_fechas),
+        (FECHAS_EN_RANGO, partial(validar_fechas_en_rango, campaign=campaign)),
+        (VALORES_VALIDOS, validar_valores),
+    )
+
+
 def validar(df: pd.DataFrame, campaign: Campaign) -> InformeValidacion:
-    """Ejecuta las 5 validaciones, empezando por la comprobación de DataFrame vacío."""
+    """Ejecuta las 6 validaciones, empezando por la comprobación de DataFrame vacío"""
     resultados: list[ResultadoValidacion] = []
     bloqueado_por: str | None = None
 
-    for nombre, funcion in _VALIDACIONES:
+    for nombre, funcion in _validaciones(campaign):
         if bloqueado_por is not None:
             resultado = ResultadoValidacion(
                 nombre, False, f"no ejecutada ({bloqueado_por} falló)"

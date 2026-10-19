@@ -1,18 +1,20 @@
-"""Configuración por campaña: qué archivo leer y cómo mapear sus columnas.
+"""
+Configuración por campaña: qué archivo leer y cómo mapear sus columnas.
 
 Cada campaña llega con nombres de columna y convenciones distintas. Aquí se
-declaran las diferencias para que ``clean.py`` sea el mismo para todas.
+declaran las diferencias para que clean.py sea el mismo para todas.
 """
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import date
 from enum import StrEnum
 from types import MappingProxyType
 from typing import Final
 
 
 class Campaign(StrEnum):
-    """Los valores coinciden con la columna ``campana`` / ``promocion`` de los CSV."""
+    """Los valores coinciden con la columna campana / promocion de los CSV"""
 
     VERANO = "verano_2024"
     PRIMAVERA = "primavera_2024"
@@ -66,6 +68,9 @@ class CampaignConfig:
     # None = ya vienen como vacío (nulo); un entero = valor centinela.
     anonimo_valor: int | None
     particion: str  # valor de campana=<...> en silver
+    # Periodo de la campaña con ambos extremos incluidos
+    fecha_min: date
+    fecha_max: date
 
 
 CONFIGS: Mapping[Campaign, CampaignConfig] = MappingProxyType(
@@ -75,6 +80,8 @@ CONFIGS: Mapping[Campaign, CampaignConfig] = MappingProxyType(
             columnas=MappingProxyType({c: c for c in COLUMNAS_CANONICAS}),
             anonimo_valor=None,
             particion="verano",
+            fecha_min=date(2024, 6, 15),
+            fecha_max=date(2024, 9, 15),
         ),
         Campaign.PRIMAVERA: CampaignConfig(
             archivo="campana_primavera_ventas.csv",
@@ -93,6 +100,8 @@ CONFIGS: Mapping[Campaign, CampaignConfig] = MappingProxyType(
             ),
             anonimo_valor=-1,
             particion="primavera",
+            fecha_min=date(2024, 3, 1),
+            fecha_max=date(2024, 5, 31),
         ),
     }
 )

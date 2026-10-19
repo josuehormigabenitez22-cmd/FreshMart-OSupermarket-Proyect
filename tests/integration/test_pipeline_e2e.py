@@ -52,7 +52,7 @@ def test_e2e_verano_limpia_valida_y_escribe_parquet_particionado(
     resultado = run_pipeline(Campaign.VERANO, entrada, silver)
 
     assert resultado.informe.ok
-    assert (resultado.informe.aprobadas, resultado.informe.total) == (5, 5)
+    assert (resultado.informe.aprobadas, resultado.informe.total) == (6, 6)
     assert resultado.filas == 3  # 5 filas - 1 duplicado - 1 cantidad 0
     assert resultado.destino == silver / SILVER_TABLE / "campana=verano"
     assert (resultado.destino / PARQUET_FILE).is_file()
@@ -112,6 +112,22 @@ def test_e2e_si_falla_una_validacion_no_se_escribe_nada_en_silver(
     assert not silver.exists()  # ni siquiera se crea el directorio
 
 
+def test_e2e_fecha_fuera_de_la_campana_no_se_escribe(tmp_path: Path) -> None:
+    entrada, silver = tmp_path / "in", tmp_path / "silver"
+    _escribir(
+        entrada,
+        "campana_verano_ventas.csv",
+        VERANO_OK.replace("2024-08-04", "2024-12-04"),
+    )
+
+    with pytest.raises(PipelineValidationError) as excinfo:
+        run_pipeline(Campaign.VERANO, entrada, silver)
+
+    fallos = [r.nombre for r in excinfo.value.informe.resultados if not r.ok]
+    assert fallos == ["fechas_en_rango"]
+    assert not silver.exists()
+
+
 def test_e2e_un_fallo_no_estropea_una_particion_anterior(tmp_path: Path) -> None:
     entrada, silver = tmp_path / "in", tmp_path / "silver"
     _escribir(entrada, "campana_verano_ventas.csv", VERANO_OK)
@@ -154,12 +170,12 @@ def test_e2e_cli_codigo_de_salida_y_salida_por_pantalla(
     ]
 
     assert main(args) == 0
-    assert "5/5 OK" in capsys.readouterr().out
+    assert "6/6 OK" in capsys.readouterr().out
 
     _escribir(entrada, "campana_verano_ventas.csv", VERANO_FECHA_VACIA)
     assert main(args) == 1
     salida = capsys.readouterr().out
-    assert "4/5 OK" in salida
+    assert "5/6 OK" in salida
     assert "Silver NO modificado" in salida
 
 
