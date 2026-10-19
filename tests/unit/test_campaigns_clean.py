@@ -20,9 +20,8 @@ from freshmart.campaigns.config import (
     get_config,
 )
 
-# --- config ------------------------------------------------------------------
 
-
+# config
 def test_config_anonimo_valor_por_campana() -> None:
     assert get_config(Campaign.VERANO).anonimo_valor is None
     assert get_config(Campaign.PRIMAVERA).anonimo_valor == -1
@@ -39,9 +38,7 @@ def test_config_todos_los_mappings_cubren_el_esquema_canonico() -> None:
         assert destino == set(COLUMNAS_CANONICAS)
 
 
-# --- renombrar_columnas ------------------------------------------------------
-
-
+# renombrar_columnas
 def test_renombrar_columnas_caso_feliz() -> None:
     df = pd.DataFrame({"id_cliente": ["1"], "importe": ["2.5"], "sobra": ["x"]})
     resultado = renombrar_columnas(
@@ -62,7 +59,7 @@ def test_renombrar_columnas_no_muta_la_entrada() -> None:
     assert list(df.columns) == ["a"]
 
 
-# --- eliminar_duplicados -----------------------------------------------------
+# eliminar_duplicados
 
 
 def test_eliminar_duplicados_caso_feliz(caplog: pytest.LogCaptureFixture) -> None:
@@ -79,9 +76,7 @@ def test_eliminar_duplicados_conserva_filas_que_difieren_en_una_columna() -> Non
     assert len(eliminar_duplicados(df.iloc[0:0])) == 0  # vacío
 
 
-# --- eliminar_cantidades_no_positivas ---------------------------------------
-
-
+# eliminar_cantidades_no_positivas
 def test_eliminar_cantidades_no_positivas_caso_feliz(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -100,9 +95,7 @@ def test_eliminar_cantidades_no_positivas_negativos_si_nulos_no() -> None:
     assert eliminar_cantidades_no_positivas(df)["id"].tolist() == [2, 3]
 
 
-# --- parsear_fechas ----------------------------------------------------------
-
-
+# parsear_fechas
 def test_parsear_fechas_las_tres_mascaras() -> None:
     serie = pd.Series(["2024-08-05", "14/07/2024", "Jun 30, 2024"])
     assert parsear_fechas(serie).tolist() == [
@@ -135,7 +128,7 @@ def test_parsear_fechas_fecha_imposible_lanza_error() -> None:
         parsear_fechas(pd.Series(["31/02/2024"]))
 
 
-# --- parsear_precio ----------------------------------------------------------
+# parsear_precio
 
 
 def test_parsear_precio_coma_y_euro() -> None:
@@ -151,7 +144,7 @@ def test_parsear_precio_nulo_pasa_y_miles_se_rechazan() -> None:
         parsear_precio(pd.Series(["abc"]))
 
 
-# --- normalizar_enteros ------------------------------------------------------
+# normalizar_enteros
 
 
 def test_normalizar_enteros_acepta_ids_con_decimal_cero() -> None:
@@ -168,9 +161,7 @@ def test_normalizar_enteros_nulos_y_no_enteros() -> None:
         normalizar_enteros(pd.Series(["1.5"]))
 
 
-# --- marcar_anonimos ---------------------------------------------------------
-
-
+# marcar_anonimos
 def test_marcar_anonimos_centinela_pasa_a_nulo() -> None:
     ids = pd.Series([-1, 100, -1], dtype="Int64")
     resultado = marcar_anonimos(ids, -1)
@@ -185,9 +176,7 @@ def test_marcar_anonimos_none_no_toca_nada_y_respeta_los_nulos() -> None:
     assert marcar_anonimos(ids, -1).isna().tolist() == [True, True, False]
 
 
-# --- limpiar_campana (integración de las piezas) -----------------------------
-
-
+#  limpiar_campana (integración de las piezas
 def test_limpiar_campana_verano() -> None:
     raw = pd.DataFrame(
         {
