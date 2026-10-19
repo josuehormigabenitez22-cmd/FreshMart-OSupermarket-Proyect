@@ -1,6 +1,6 @@
 """Capa gold con los CSV reales. Se salta si data/ no existe (.gitignore).
 
-Cifras de referencia verificadas (ver .claude/skills/freshmart-contexto).
+Cifras de referencia verificadas (ver la tabla del final de PROGRESO.md).
 """
 
 from pathlib import Path

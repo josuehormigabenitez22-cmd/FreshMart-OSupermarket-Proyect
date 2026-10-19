@@ -46,6 +46,8 @@ FreshMart-OSupermarket-Proyect/
 │   ├── segmentation/            # Segmentación de clientes (pandas, verificada contra SQL)
 │   ├── catalog/                 # Silver de productos y categorías
 │   ├── campaigns/               # config, clean, validate, pipeline (→ silver), gold, cli
+│   ├── dashboard/               # Las 4 cards de Metabase ejecutadas con DuckDB
+│   ├── quality/                 # Validador de CSV, detección de gaps y alertas a Slack
 │   └── orders/                  # Extracción diaria de pedidos (la usa el DAG)
 ├── dags/                        # DAGs de Airflow (sin credenciales)
 ├── sql/                         # Consultas SQL (DuckDB)
@@ -90,6 +92,8 @@ Con el entorno activado, desde la raíz del repo:
 | Campañas a silver y después gold | `python scripts/ejecutar_pipeline.py --all --input data --silver-dir freshmart-lake/silver --gold-dir freshmart-lake/gold` |
 | Solo gold (con silver ya construido) | `python scripts/ejecutar_pipeline.py --only-gold --silver-dir freshmart-lake/silver --gold-dir freshmart-lake/gold` |
 | Las 4 cards del dashboard | `python scripts/dashboard.py --gold-dir freshmart-lake/gold --input data` |
+| Validar un CSV antes de subirlo | `python scripts/validar_csv.py data/campana_verano_ventas.csv --campaign verano` |
+| Detectar días sin datos en gold | `python -m freshmart.quality.gap_detection --gold-dir freshmart-lake/gold --campaign verano` |
 
 Orden la primera vez: `--catalog` y luego `--all` con `--gold-dir` (gold necesita el catálogo).
 
@@ -101,6 +105,18 @@ código del pipeline.
 Resultado esperado con los datos del caso: verano 42.733 filas y primavera 31.204 (6/6
 validaciones cada una); gold con 166 filas en `campaign_performance` y revenue neto de
 996.555 € (verano) y 750.622 € (primavera).
+
+### Calidad de entrada y monitorización
+
+- **Antes de procesar** un CSV, `validar_csv.py` comprueba columnas, tipos, nulos y
+  duplicados con el esquema de la campaña. Los errores impiden procesarlo (código de salida 1);
+  los avisos (varios formatos de fecha, duplicados exactos) se informan.
+- **Después**, `gap_detection` busca días sin filas en `gold.campaign_performance`: un pipeline
+  puede terminar en verde sin escribir nada. Sin `--desde`/`--hasta` revisa los huecos internos;
+  con `--alert` avisa a Slack usando el webhook de la variable `SLACK_WEBHOOK_URL`. Sin gaps no
+  se envía nada.
+
+Los dos usan el mismo resultado de validación (`freshmart.quality.result`) que el pipeline.
 
 ### DAG `raw_orders_daily` (Airflow)
 
@@ -171,6 +187,7 @@ aprendizaje en arquitectura y procesamiento de datos.
 ## License
 
 This project is proprietary and all rights are reserved.
+
 Viewing the repository for portfolio evaluation does not
 grant permission to reuse, modify, or distribute its contents.
 
