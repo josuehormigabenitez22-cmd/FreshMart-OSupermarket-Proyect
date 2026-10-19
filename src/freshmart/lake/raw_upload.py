@@ -22,20 +22,25 @@ logger = logging.getLogger(__name__)
 
 SOURCE = "marketing"
 
-FILES = [
+# Archivo -> fuente (raw/{fuente}/{tabla}/...). Los primeros llegaron todos por
+# Marketing y ya están subidos con esa fuente: raw es inmutable, no se mueven.
+FILES: dict[str, str] = {
     # Campaña de primavera
-    "campana_primavera_ventas.csv",
+    "campana_primavera_ventas.csv": SOURCE,
     # Campaña de verano
-    "campana_verano_clientes.csv",
-    "campana_verano_ventas.csv",
-    "productos_promo_verano.csv",
+    "campana_verano_clientes.csv": SOURCE,
+    "campana_verano_ventas.csv": SOURCE,
+    "productos_promo_verano.csv": SOURCE,
     # Datos generales
-    "clientes.csv",
-    "pedidos.csv",
+    "clientes.csv": SOURCE,
+    "pedidos.csv": SOURCE,
     # Catálogo (lo necesita la capa gold)
-    "productos.csv",
-    "categorias.csv",
-]
+    "productos.csv": SOURCE,
+    "categorias.csv": SOURCE,
+    # Operaciones (semana 2)
+    "inventario_diario.csv": "inventory",
+    "lineas_pedido.csv": "orders",
+}
 
 MANIFEST_PATH = RAW_DIR / "_manifest.json"
 
@@ -88,7 +93,7 @@ def upload_raw(
     raw_dir.mkdir(parents=True, exist_ok=True)
     registros = cargar_manifest(manifest_path)
 
-    for nombre in FILES:
+    for nombre, fuente in FILES.items():
         origen = data_dir / nombre
 
         if not origen.is_file():
@@ -98,7 +103,7 @@ def upload_raw(
         tabla = Path(nombre).stem
         destino_dir = raw_table_path(
             raw_dir=raw_dir,
-            source=SOURCE,
+            source=fuente,
             table=tabla,
             ingestion_date=ingestion_date,
         )
@@ -125,7 +130,7 @@ def upload_raw(
         registro_anterior = registros.get(ruta_relativa)
 
         registros[ruta_relativa] = {
-            "source": SOURCE,
+            "source": fuente,
             "table": tabla,
             "file": nombre,
             "path": ruta_relativa,
