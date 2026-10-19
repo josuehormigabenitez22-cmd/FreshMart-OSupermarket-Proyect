@@ -19,8 +19,11 @@ from freshmart.campaigns.config import (
     Campaign,
     get_config,
 )
+from freshmart.quality.result import InformeCalidad, ResultadoValidacion
 
 logger = logging.getLogger(__name__)
+
+__all__ = ["InformeValidacion", "ResultadoValidacion", "validar"]
 
 NO_VACIO = "no_vacio"
 COLUMNAS_ESPERADAS = "columnas_esperadas"
@@ -31,38 +34,10 @@ VALORES_VALIDOS = "valores_validos"
 
 
 @dataclass(frozen=True)
-class ResultadoValidacion:
-    nombre: str
-    ok: bool
-    detalle: str
+class InformeValidacion(InformeCalidad):
+    """Informe de calidad de una campaña: todas sus validaciones son de severidad ERROR."""
 
-
-@dataclass(frozen=True)
-class InformeValidacion:
     campaign: Campaign
-    resultados: tuple[ResultadoValidacion, ...]
-
-    @property
-    def total(self) -> int:
-        return len(self.resultados)
-
-    @property
-    def aprobadas(self) -> int:
-        return sum(r.ok for r in self.resultados)
-
-    @property
-    def ok(self) -> bool:
-        return self.aprobadas == self.total
-
-    def resumen(self) -> str:
-        lineas = [
-            f"Validaciones {self.campaign.value}: {self.aprobadas}/{self.total} OK"
-        ]
-        lineas += [
-            f"  [{'OK' if r.ok else 'FALLA'}] {r.nombre}: {r.detalle}"
-            for r in self.resultados
-        ]
-        return "\n".join(lineas)
 
 
 def _cumple(condicion: pd.Series) -> pd.Series:
@@ -170,4 +145,8 @@ def validar(df: pd.DataFrame, campaign: Campaign) -> InformeValidacion:
         log("[%s] %s: %s", campaign.value, resultado.nombre, resultado.detalle)
         resultados.append(resultado)
 
-    return InformeValidacion(campaign=campaign, resultados=tuple(resultados))
+    return InformeValidacion(
+        titulo=f"Validaciones {campaign.value}",
+        resultados=tuple(resultados),
+        campaign=campaign,
+    )
