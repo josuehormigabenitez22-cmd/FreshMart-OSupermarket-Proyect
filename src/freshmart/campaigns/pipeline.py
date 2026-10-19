@@ -1,7 +1,7 @@
 """Pipeline de campaña: raw (CSV) -> limpieza -> validación -> silver (Parquet).
 
 Si alguna validación falla no se escribe nada en silver. Los paths no están en
-el código: se reciben por argumentos (función y línea de comandos).
+el código: se reciben por argumentos. La línea de comandos está en ``cli.py``.
 
 Layout de salida (estilo Hive):
 
@@ -11,10 +11,8 @@ La columna ``campana`` no se guarda dentro del Parquet: la aporta la partición.
 Al leer el directorio con pandas/pyarrow vuelve a aparecer como columna.
 """
 
-import argparse
 import logging
 import shutil
-from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -92,48 +90,3 @@ def run_pipeline(
     return PipelineResult(
         campaign=campaign, filas=len(limpio), informe=informe, destino=destino
     )
-
-
-def parse_campaign(texto: str) -> Campaign:
-    """Acepta 'verano_2024' (valor del Enum) o 'verano' (nombre de partición)."""
-    for campaign in Campaign:
-        if texto in (campaign.value, get_config(campaign).particion):
-            return campaign
-    validos = ", ".join(c.value for c in Campaign)
-    raise argparse.ArgumentTypeError(
-        f"campaña desconocida '{texto}' (válidas: {validos})"
-    )
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Limpia y valida una campaña y la escribe en silver (Parquet)."
-    )
-    parser.add_argument("--campaign", type=parse_campaign, required=True)
-    parser.add_argument(
-        "--input", type=Path, required=True, help="Directorio con los CSV."
-    )
-    parser.add_argument(
-        "--silver-dir", type=Path, required=True, help="Directorio silver."
-    )
-    args = parser.parse_args(argv)
-
-    logging.basicConfig(
-        level=logging.INFO, format="%(levelname)s %(name)s: %(message)s"
-    )
-
-    try:
-        resultado = run_pipeline(args.campaign, args.input, args.silver_dir)
-    except PipelineValidationError as error:
-        print(error.informe.resumen())
-        print("Silver NO modificado.")
-        return 1
-
-    print(resultado.informe.resumen())
-    print(f"Filas escritas: {resultado.filas}")
-    print(f"Silver: {resultado.destino}")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

@@ -1,4 +1,4 @@
-from freshmart.campaigns.pipeline import main
+from freshmart.campaigns.cli import main
 
 if __name__ == "__main__":
     raise SystemExit(main())
