@@ -25,3 +25,8 @@ venv/
 # Sistema operativo
 .DS_Store
 Thumbs.db
+# Documentos de trabajo personales: se quedan en local
+PROGRESO.md
+docs/Bienvenido.md
+docs/preview_maria.md
+docs/retrospectiva_semana1.md
